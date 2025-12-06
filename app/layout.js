@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
+import SessionProvider from "./providers/SessionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,13 +27,19 @@ export default function RootLayout({ children }) {
         <div className="min-h-screen bg-surface text-slate-900">
           <header className="sticky top-0 z-20 backdrop-blur bg-surface/80 border-b border-slate-200">
             <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-2 font-semibold text-lg">
+              <Link
+                href="/"
+                className="flex items-center gap-2 font-semibold text-lg"
+              >
                 <span className="h-10 w-10 rounded-xl bg-emerald-600 text-white grid place-items-center shadow-sm shadow-emerald-200">
                   SV
                 </span>
                 <span>StudyVault</span>
               </Link>
               <nav className="flex items-center gap-6 text-sm font-medium text-slate-700">
+              <Link href="/admin" className="hover:text-emerald-600">
+                  Admin
+                </Link>
                 <Link href="/papers" className="hover:text-emerald-600">
                   Papers
                 </Link>
@@ -42,7 +49,9 @@ export default function RootLayout({ children }) {
               </nav>
             </div>
           </header>
-          <main>{children}</main>
+          <main>
+            <SessionProvider>{children}</SessionProvider>
+          </main>
         </div>
       </body>
     </html>
