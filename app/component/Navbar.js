@@ -1,10 +1,35 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
+import { FiLogOut, FiUser, FiChevronDown } from "react-icons/fi";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen]);
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: "/" });
+  };
 
   return (
     <header className="sticky top-0 z-20 backdrop-blur bg-surface/80 border-b border-slate-200">
@@ -21,12 +46,12 @@ export default function Navbar() {
         <nav className="flex items-center gap-6 text-sm font-medium text-slate-700">
           {/* Admin button - only show if user is admin */}
           {status === "authenticated" && session?.user?.role === "admin" && (
-            <Link href="/admin" className="hover:text-emerald-600">
+            <Link href="/admin" className="hover:text-emerald-600 transition-colors">
               Admin
             </Link>
           )}
           
-          <Link href="/papers" className="hover:text-emerald-600">
+          <Link href="/papers" className="hover:text-emerald-600 transition-colors">
             Papers
           </Link>
           
@@ -34,13 +59,60 @@ export default function Navbar() {
           {status === "loading" ? (
             <div className="text-slate-400">Loading...</div>
           ) : status === "authenticated" && session ? (
-            <div className="flex items-center gap-2">
-              <span className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md shadow-emerald-200/50 transform transition-all hover:scale-105">
-                Welcome! {session.user.name || session.user.email?.split("@")[0]}
-              </span>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md shadow-emerald-200/50 transform transition-all hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2"
+              >
+                <span className="flex items-center gap-2">
+                  <FiUser size={16} />
+                  {session.user.name || session.user.email?.split("@")[0]}
+                </span>
+                <FiChevronDown 
+                  size={16} 
+                  className={`transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-2">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-sm font-semibold text-slate-900">
+                        {session.user.name || "User"}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {session.user.email}
+                      </p>
+                      {session.user.role === "admin" && (
+                        <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-100 text-emerald-700">
+                          Admin
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Sign Out Button */}
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors rounded-lg group"
+                    >
+                      <FiLogOut 
+                        size={18} 
+                        className="group-hover:translate-x-0.5 transition-transform" 
+                      />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
-            <Link href="/auth" className="hover:text-emerald-600">
+            <Link 
+              href="/auth" 
+              className="hover:text-emerald-600 transition-colors"
+            >
               Login / Signup
             </Link>
           )}

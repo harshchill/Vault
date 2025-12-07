@@ -36,6 +36,20 @@ export const authoptions = NextAuth({
           console.error('Error in jwt callback:', error);
           token.role = 'user';
         }
+      }  else {
+        // On subsequent requests, always fetch latest role from database
+        // This ensures role changes in DB are reflected immediately
+        try {
+          await connectDB();
+          const dbUser = await User.findOne({ email: token.email });
+          if (dbUser) {
+            token.role = dbUser.role || 'user';
+            token.name = dbUser.name || token.name;
+          }
+        } catch (error) {
+          console.error('Error fetching user role in jwt callback:', error);
+          // Keep existing token values on error
+        }
       }
       return token;
     },
