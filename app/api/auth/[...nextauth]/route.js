@@ -19,6 +19,26 @@ export const authoptions = NextAuth({
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
+    async jwt({ token, user, account }) {
+      // Add role to token on first sign in
+      if (user) {
+        try {
+          await connectDB();
+          const dbUser = await User.findOne({ email: user.email });
+          if (dbUser) {
+            token.role = dbUser.role || 'user';
+            token.name = dbUser.name || user.name;
+          } else {
+            token.role = 'user';
+            token.name = user.name;
+          }
+        } catch (error) {
+          console.error('Error in jwt callback:', error);
+          token.role = 'user';
+        }
+      }
+      return token;
+    },
     async signIn({ user, account, profile, email, credentials }) {
       try {
         await connectDB();
@@ -46,27 +66,30 @@ export const authoptions = NextAuth({
         return false;
       }
     },
-    async session({ session, user, token }) {
-      try {
-        await connectDB();
-        const dbUser = await User.findOne({ email: session.user.email });
-        
-        if (dbUser) {
-          session.user.name = dbUser.name || session.user.name || session.user.email?.split("@")[0];
-          session.user.role = dbUser.role || 'user'; // Include role in session
-        } else {
-          // Fallback if user not found in DB
+    async session({ session, token }) {
+      // Get role from token (set in jwt callback)
+      if (token) {
+        session.user.role = token.role || 'user';
+        session.user.name = token.name || session.user.name || session.user.email?.split("@")[0];
+      } else {
+        // Fallback: try to get from database
+        try {
+          await connectDB();
+          const dbUser = await User.findOne({ email: session.user.email });
+          if (dbUser) {
+            session.user.name = dbUser.name || session.user.name || session.user.email?.split("@")[0];
+            session.user.role = dbUser.role || 'user';
+          } else {
+            session.user.name = session.user.name || session.user.email?.split("@")[0];
+            session.user.role = 'user';
+          }
+        } catch (error) {
+          console.error('Error in session callback:', error);
           session.user.name = session.user.name || session.user.email?.split("@")[0];
           session.user.role = 'user';
         }
-        return session;
-      } catch (error) {
-        console.error('Error in session callback:', error);
-        // Return session with fallback values
-        session.user.name = session.user.name || session.user.email?.split("@")[0];
-        session.user.role = 'user';
-        return session;
       }
+      return session;
     },
   },
 });
