@@ -18,7 +18,9 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { FiFolder, FiFilter, FiClock, FiBookOpen, FiExternalLink } from "react-icons/fi";
+import LoginRequiredModal from "../component/LoginRequiredModal";
 
 // Semester options for the filter dropdown
 const semesters = [
@@ -35,12 +37,14 @@ const semesters = [
 
 export default function PapersPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   
   // State management
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSemester, setSelectedSemester] = useState("All semesters");
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Fetch papers from API on component mount
   useEffect(() => {
@@ -87,16 +91,37 @@ export default function PapersPage() {
 
   /**
    * Handles navigating to the paper view page
+   * Checks if user is logged in before allowing access
    * @param {string} paperId - ID of the paper to view
    */
   const handleViewPaper = (paperId) => {
-    if (paperId) {
-      router.push(`/papers/${paperId}`);
+    if (!paperId) return;
+
+    // Check if user is authenticated
+    if (status === 'loading') {
+      // Still checking authentication, wait a moment
+      return;
     }
+
+    if (status === 'unauthenticated' || !session) {
+      // User is not logged in, show login modal
+      setShowLoginModal(true);
+      return;
+    }
+
+    // User is authenticated, proceed to view paper
+    router.push(`/papers/${paperId}`);
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-14 space-y-10">
+    <>
+      {/* Login Required Modal */}
+      <LoginRequiredModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)} 
+      />
+
+      <div className="max-w-6xl mx-auto px-4 py-14 space-y-10">
       {/* Header Section */}
       <div className="flex items-start justify-between gap-6 flex-wrap">
         <div className="space-y-2">
@@ -235,7 +260,8 @@ export default function PapersPage() {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

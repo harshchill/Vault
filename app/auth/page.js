@@ -1,12 +1,28 @@
 "use client";
 import { signIn, signOut} from "next-auth/react";
 import { FiGithub, FiMail } from "react-icons/fi";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
+import { useEffect } from "react";
+
+  
+    
+export default function AuthPage() {
+  const { data: session, status } = useSession();
+    const router = useRouter();
 
     const handleSignIn = async (provider) => {
         await signIn(provider);
     }
-export default function AuthPage() {
+
+    useEffect(() => {
+        // Check if session status is authenticated, not just if session exists
+        if(status === "authenticated" && session){
+            router.push("/");
+        }
+    }, [session, status, router]);
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-16 grid md:grid-cols-2 gap-10 items-center">
       <div className="space-y-4">
@@ -67,9 +83,7 @@ export default function AuthPage() {
             Continue with email
           </button>
         </div>
-        <p className="text-xs text-slate-500 text-center">
-          This is a frontend-only MVP preview. Hook up your auth provider to enable sign in.
-        </p>
+        
       </div>
     </div>
   );

@@ -26,14 +26,19 @@ export const authoptions = NextAuth({
             await User.create({
             email: user.email,
             username: user.email.split("@")[0],
+            role: 'user', // Default role for new users
           });
         }
         return true;
       
     },
     async session({ session, user, token }) {
+      await connectDB();
       const dbUser = await User.findOne({ email: session.user.email });
-      session.user.name = dbUser.username;
+      if (dbUser) {
+        session.user.name = dbUser.username;
+        session.user.role = dbUser.role || 'user'; // Include role in session
+      }
       return session;
     },
   },
