@@ -12,6 +12,8 @@ import Paper from '@/models/paper';
  *   subject: string (required),
  *   semester: number (required, 1-8),
  *   year: number (required),
+ *   department: string (required, CS|mining|cement|others),
+ *   program: string (required),
  *   url: string (required) - URL to the PDF file
  * }
  * 
@@ -27,12 +29,21 @@ export async function POST(request) {
 
     // Parse request body
     const body = await request.json();
-    const { title, subject, semester, year, url } = body;
+    const { title, subject, semester, year, department, program, url } = body;
 
     // Validate required fields
-    if (!title || !subject || !semester || !year || !url) {
+    if (!title || !subject || !semester || !year || !department || !program || !url) {
       return NextResponse.json(
-        { error: 'Missing required fields: title, subject, semester, year, url' },
+        { error: 'Missing required fields: title, subject, semester, year, department, program, url' },
+        { status: 400 }
+      );
+    }
+    
+    // Validate department
+    const validDepartments = ['CS', 'mining', 'cement', 'others'];
+    if (!validDepartments.includes(department)) {
+      return NextResponse.json(
+        { error: `Department must be one of: ${validDepartments.join(', ')}` },
         { status: 400 }
       );
     }
@@ -61,6 +72,8 @@ export async function POST(request) {
       subject: subject.trim(),
       semester: semesterNum,
       year: yearNum,
+      department: department,
+      program: program.trim(),
       url: url.trim(),
     });
 
@@ -74,6 +87,8 @@ export async function POST(request) {
           subject: paper.subject,
           semester: paper.semester,
           year: paper.year,
+          department: paper.department,
+          program: paper.program,
           url: paper.url,
           createdAt: paper.createdAt,
         }
@@ -107,6 +122,8 @@ export async function POST(request) {
  * - semester: number - Filter by semester (1-8)
  * - year: number - Filter by year
  * - subject: string - Filter by subject code
+ * - department: string - Filter by department (CS|mining|cement|others)
+ * - program: string - Filter by program
  * 
  * Returns:
  * - 200: Success with array of papers
@@ -121,6 +138,8 @@ export async function GET(request) {
     const semester = searchParams.get('semester');
     const year = searchParams.get('year');
     const subject = searchParams.get('subject');
+    const department = searchParams.get('department');
+    const program = searchParams.get('program');
 
     // Build filter object
     const filter = {};
@@ -135,11 +154,17 @@ export async function GET(request) {
     if (subject) {
       filter.subject = { $regex: subject, $options: 'i' }; // Case-insensitive search
     }
+    if (department) {
+      filter.department = department;
+    }
+    if (program) {
+      filter.program = { $regex: program, $options: 'i' }; // Case-insensitive search
+    }
 
     // Fetch papers from database
     const papers = await Paper.find(filter)
       .sort({ createdAt: -1 }) // Most recent first
-      .select('title subject semester year url createdAt');
+      .select('title subject semester year department program url createdAt');
 
     return NextResponse.json(
       { 
@@ -151,6 +176,8 @@ export async function GET(request) {
           subject: paper.subject,
           semester: paper.semester,
           year: paper.year,
+          department: paper.department,
+          program: paper.program,
           url: paper.url,
           createdAt: paper.createdAt,
         }))

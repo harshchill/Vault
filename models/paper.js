@@ -7,6 +7,21 @@ const PaperSchema = new mongoose.Schema({
   subject: { type: String, required: true },
   semester: { type: Number, required: true },
   year: { type: Number, required: true },
+  
+  // Department field: CS, mining, cement, or others
+  department: { 
+    type: String, 
+    required: true,
+    enum: ['CS', 'mining', 'cement', 'others'],
+    default: 'CS'
+  },
+  
+  // Program field: B.tech, BE, BSc, or anything
+  program: { 
+    type: String, 
+    required: true,
+    default: 'B.tech'
+  },
 
   // For testing, just store the direct URL to the PDF/Image
   // (e.g., a link to your public folder or a simple S3 link)

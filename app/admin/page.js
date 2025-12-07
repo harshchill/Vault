@@ -31,6 +31,8 @@ export default function AdminUpload() {
     subject: '',
     semester: '1',
     year: new Date().getFullYear(),
+    department: 'CS',
+    program: 'B.tech',
   });
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
@@ -131,8 +133,15 @@ export default function AdminUpload() {
       return;
     }
 
-    if (!formData.title.trim() || !formData.subject.trim()) {
-      setError('Please fill in all required fields.');
+    if (!formData.title.trim() || !formData.subject.trim() || !formData.department || !formData.program.trim()) {
+      setError('Please fill in all required fields including department and program.');
+      return;
+    }
+    
+    // Validate department
+    const validDepartments = ['CS', 'mining', 'cement', 'others'];
+    if (!validDepartments.includes(formData.department)) {
+      setError(`Invalid department. Must be one of: ${validDepartments.join(', ')}`);
       return;
     }
 
@@ -179,15 +188,18 @@ export default function AdminUpload() {
           subject: formData.subject.trim(),
           semester: semesterNum,
           year: yearNum,
+          department: formData.department,
+          program: formData.program.trim(),
           url: publicUrl,
         }),
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to save paper to database.');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
+        throw new Error(errorData.error || `Failed to save paper to database. Status: ${response.status}`);
       }
+      
+      const result = await response.json();
 
       // Success!
       setSuccess(`Paper "${formData.title}" uploaded successfully!`);
@@ -198,7 +210,9 @@ export default function AdminUpload() {
         title: '', 
         subject: '', 
         semester: '1', 
-        year: new Date().getFullYear() 
+        year: new Date().getFullYear(),
+        department: 'CS',
+        program: 'B.tech',
       });
       setFile(null);
       
@@ -208,7 +222,18 @@ export default function AdminUpload() {
 
     } catch (error) {
       console.error('Upload error:', error);
-      setError(error.message || 'Upload failed. Please try again.');
+      // Provide user-friendly error messages
+      let errorMessage = 'Upload failed. Please try again.';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (error.name === 'ValidationError') {
+        errorMessage = 'Validation error. Please check all fields and try again.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -316,24 +341,60 @@ export default function AdminUpload() {
             </div>
           </div>
 
-          {/* Semester Select */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-              Semester <span className="text-red-500">*</span>
-            </label>
-            <select 
-              name="semester" 
-              value={formData.semester} 
-              onChange={handleChange}
-              disabled={loading}
-              className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                <option key={num} value={num.toString()}>
-                  Semester {num}
-                </option>
-              ))}
-            </select>
+          {/* Semester, Department, and Program Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                Semester <span className="text-red-500">*</span>
+              </label>
+              <select 
+                name="semester" 
+                value={formData.semester} 
+                onChange={handleChange}
+                disabled={loading}
+                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                  <option key={num} value={num.toString()}>
+                    Semester {num}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                Department <span className="text-red-500">*</span>
+              </label>
+              <select 
+                name="department" 
+                value={formData.department} 
+                onChange={handleChange}
+                disabled={loading}
+                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="CS">CS</option>
+                <option value="mining">Mining</option>
+                <option value="cement">Cement</option>
+                <option value="others">Others</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                Program <span className="text-red-500">*</span>
+              </label>
+              <input 
+                name="program"
+                type="text"
+                required 
+                value={formData.program} 
+                onChange={handleChange}
+                placeholder="e.g. B.tech, BE, BSc"
+                disabled={loading}
+                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+              />
+            </div>
           </div>
 
           {/* Submit Button */}

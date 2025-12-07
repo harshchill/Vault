@@ -44,6 +44,8 @@ export default function PapersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSemester, setSelectedSemester] = useState("All semesters");
+  const [selectedDepartment, setSelectedDepartment] = useState("All departments");
+  const [selectedProgram, setSelectedProgram] = useState("All programs");
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Fetch papers from API on component mount
@@ -77,17 +79,30 @@ export default function PapersPage() {
     fetchPapers();
   }, []);
 
-  // Filter papers by selected semester
+  // Filter papers by selected filters
   const filtered = useMemo(() => {
-    if (selectedSemester === "All semesters") {
-      return papers;
+    let result = papers;
+
+    // Filter by semester
+    if (selectedSemester !== "All semesters") {
+      const semesterNum = parseInt(selectedSemester.replace('Semester ', ''), 10);
+      result = result.filter((paper) => paper.semester === semesterNum);
     }
 
-    // Extract semester number from "Semester X" format
-    const semesterNum = parseInt(selectedSemester.replace('Semester ', ''), 10);
-    
-    return papers.filter((paper) => paper.semester === semesterNum);
-  }, [papers, selectedSemester]);
+    // Filter by department
+    if (selectedDepartment !== "All departments") {
+      result = result.filter((paper) => paper.department === selectedDepartment);
+    }
+
+    // Filter by program
+    if (selectedProgram !== "All programs") {
+      result = result.filter((paper) => 
+        paper.program?.toLowerCase().includes(selectedProgram.toLowerCase())
+      );
+    }
+
+    return result;
+  }, [papers, selectedSemester, selectedDepartment, selectedProgram]);
 
   /**
    * Handles navigating to the paper view page
@@ -123,30 +138,69 @@ export default function PapersPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-14 space-y-10">
       {/* Header Section */}
-      <div className="flex items-start justify-between gap-6 flex-wrap">
+      <div className="space-y-6">
         <div className="space-y-2">
           <span className="pill">Browse collection</span>
           <h1 className="text-3xl md:text-4xl font-semibold text-slate-900">Previous semester papers</h1>
           <p className="text-slate-600">
-            Filter by semester to quickly find what you need. This MVP keeps it light, clean, and focused.
+            Filter by semester, department, or program to quickly find what you need.
           </p>
         </div>
         
-        {/* Semester Filter */}
-        <div className="card p-4 w-full md:w-auto flex items-center gap-3">
-          <FiFilter className="text-emerald-600" size={20} />
-          <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
-            disabled={loading}
-            className="bg-transparent outline-none text-sm font-medium text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {semesters.map((sem) => (
-              <option key={sem} value={sem}>
-                {sem}
-              </option>
-            ))}
-          </select>
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Semester Filter */}
+          <div className="card p-4 flex items-center gap-3">
+            <FiFilter className="text-emerald-600 shrink-0" size={20} />
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              disabled={loading}
+              className="bg-transparent outline-none text-sm font-medium text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+            >
+              {semesters.map((sem) => (
+                <option key={sem} value={sem}>
+                  {sem}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Department Filter */}
+          <div className="card p-4 flex items-center gap-3">
+            <FiFilter className="text-emerald-600 shrink-0" size={20} />
+            <select
+              value={selectedDepartment}
+              onChange={(e) => setSelectedDepartment(e.target.value)}
+              disabled={loading}
+              className="bg-transparent outline-none text-sm font-medium text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+            >
+              <option value="All departments">All departments</option>
+              <option value="CS">CS</option>
+              <option value="mining">Mining</option>
+              <option value="cement">Cement</option>
+              <option value="others">Others</option>
+            </select>
+          </div>
+          
+          {/* Program Filter */}
+          <div className="card p-4 flex items-center gap-3">
+            <FiFilter className="text-emerald-600 shrink-0" size={20} />
+            <select
+              value={selectedProgram}
+              onChange={(e) => setSelectedProgram(e.target.value)}
+              disabled={loading}
+              className="bg-transparent outline-none text-sm font-medium text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+            >
+              <option value="All programs">All programs</option>
+              <option value="B.tech">B.tech</option>
+              <option value="BE">BE</option>
+              <option value="BSc">BSc</option>
+              <option value="M.tech">M.tech</option>
+              <option value="ME">ME</option>
+              <option value="MSc">MSc</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -197,14 +251,19 @@ export default function PapersPage() {
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-12 text-center">
           <FiBookOpen className="mx-auto text-slate-400 mb-4" size={48} />
           <p className="text-slate-600 text-lg font-medium mb-2">
-            {selectedSemester === "All semesters" 
-              ? "No papers found" 
-              : `No papers found for ${selectedSemester}`}
+            No papers found
+            {(selectedSemester !== "All semesters" || selectedDepartment !== "All departments" || selectedProgram !== "All programs") && (
+              <span className="ml-1">
+                {selectedSemester !== "All semesters" && ` for ${selectedSemester}`}
+                {selectedDepartment !== "All departments" && ` in ${selectedDepartment}`}
+                {selectedProgram !== "All programs" && ` (${selectedProgram})`}
+              </span>
+            )}
           </p>
           <p className="text-slate-500 text-sm">
-            {selectedSemester === "All semesters"
+            {(selectedSemester === "All semesters" && selectedDepartment === "All departments" && selectedProgram === "All programs")
               ? "Papers will appear here once they are uploaded."
-              : "Try selecting a different semester or check back later."}
+              : "Try adjusting your filters or check back later."}
           </p>
         </div>
       )}
@@ -214,7 +273,13 @@ export default function PapersPage() {
         <>
           <div className="text-sm text-slate-600">
             Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
-            {selectedSemester !== "All semesters" && ` for ${selectedSemester}`}
+            {(selectedSemester !== "All semesters" || selectedDepartment !== "All departments" || selectedProgram !== "All programs") && (
+              <span className="ml-1">
+                {selectedSemester !== "All semesters" && ` • ${selectedSemester}`}
+                {selectedDepartment !== "All departments" && ` • ${selectedDepartment}`}
+                {selectedProgram !== "All programs" && ` • ${selectedProgram}`}
+              </span>
+            )}
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -240,6 +305,18 @@ export default function PapersPage() {
                           {paper.subject}
                         </p>
                       )}
+                      <div className="flex items-center gap-2 mt-1">
+                        {paper.department && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                            {paper.department}
+                          </span>
+                        )}
+                        {paper.program && (
+                          <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                            {paper.program}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <span className="text-xs px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 shrink-0 ml-2">

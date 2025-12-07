@@ -49,26 +49,31 @@ export default function PaperViewPage() {
 
         // Fetch all papers and find the one with matching ID
         const response = await fetch('/api/papers');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
 
-        if (!response.ok) {
+        if (!data.success) {
           throw new Error(data.error || 'Failed to fetch paper');
         }
 
-        if (data.success && data.papers) {
+        if (data.papers && Array.isArray(data.papers)) {
           const foundPaper = data.papers.find((p) => p.id === paperId);
           
           if (foundPaper) {
             setPaper(foundPaper);
           } else {
-            setError('Paper not found');
+            setError('Paper not found. It may have been removed or the ID is invalid.');
           }
         } else {
-          setError('No papers found');
+          setError('Invalid response format from server.');
         }
       } catch (err) {
         console.error('Error fetching paper:', err);
-        setError(err.message || 'Failed to load paper. Please try again.');
+        setError(err.message || 'Failed to load paper. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -114,12 +119,26 @@ export default function PaperViewPage() {
                 <span>Semester {paper.semester}</span>
               </div>
               
+              {paper.department && (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-medium">
+                    {paper.department}
+                  </span>
+                </div>
+              )}
+              
+              {paper.program && (
+                <div className="flex items-center gap-2 text-slate-600">
+                  <span className="px-2 py-1 rounded bg-teal-50 text-teal-700 text-xs font-medium">
+                    {paper.program}
+                  </span>
+                </div>
+              )}
+              
               <div className="flex items-center gap-2 text-slate-600">
                 <FiCalendar size={16} />
                 <span>{paper.year}</span>
               </div>
-
-              
             </div>
           )}
         </div>
@@ -171,7 +190,7 @@ export default function PaperViewPage() {
 
         {/* PDF Viewer */}
         {paper && paper.url && !loading && (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full">
             <PdfViewer url={paper.url} />
           </div>
         )}
