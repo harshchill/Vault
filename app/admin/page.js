@@ -1,35 +1,38 @@
 "use client";
 /**
- * Admin Upload Page
+ * Admin Dashboard Page
  * 
- * This page allows administrators to upload exam papers to the vault system.
+ * This page provides a dashboard for administrators with two main sections:
+ * 1. Upload - Upload exam papers to the vault system
+ * 2. Approval - Review and approve/reject pending papers
  * 
  * Features:
+ * - Tabbed interface for easy navigation
  * - Upload PDF files to Supabase storage
  * - Save paper metadata to MongoDB database
+ * - View and approve/reject pending papers
  * - Form validation and error handling
  * - Loading states and user feedback
  * - Admin-only access protection
  * 
- * Requirements:
- * - Environment variables: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
- * - Supabase storage bucket named "Vault" must exist
- * - MongoDB connection configured
- * - User must have admin role
- * 
  * @component
- * @returns {JSX.Element} Admin upload form component
+ * @returns {JSX.Element} Admin dashboard component
  */
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { FiUpload, FiCheckCircle, FiXCircle, FiFileText, FiClock, FiUser } from 'react-icons/fi';
 
-export default function AdminUpload() {
+export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  // State management
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState('upload');
+  
+  // Upload component state
   const [loading, setLoading] = useState(false);
   const [supabase, setSupabase] = useState(null);
   const [formData, setFormData] = useState({
@@ -44,11 +47,16 @@ export default function AdminUpload() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  // Approval component state
+  const [pendingPapers, setPendingPapers] = useState([]);
+  const [loadingPapers, setLoadingPapers] = useState(false);
+  const [approvalError, setApprovalError] = useState(null);
+
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   // Check authentication and admin role
   useEffect(() => {
-    if (status === 'loading') return; // Still checking authentication
+    if (status === 'loading') return;
     
     if (status === 'unauthenticated' || !session) {
       router.push('/auth?callbackUrl=/admin');
@@ -63,11 +71,10 @@ export default function AdminUpload() {
       return;
     }
     
-    // User is authenticated and is admin
     setIsAuthorized(true);
   }, [session, status, router]);
 
-  // Initialize Supabase client on component mount
+  // Initialize Supabase client
   useEffect(() => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -85,21 +92,76 @@ export default function AdminUpload() {
     }
   }, []);
 
-  /**
-   * Handles form input changes
-   * @param {Event} e - Change event from input element
-   */
+  // Fetch pending papers when approval tab is active
+  useEffect(() => {
+    if (activeTab === 'approval' && isAuthorized) {
+      fetchPendingPapers();
+    }
+  }, [activeTab, isAuthorized]);
+
+  // Fetch pending papers
+  const fetchPendingPapers = async () => {
+    try {
+      setLoadingPapers(true);
+      setApprovalError(null);
+
+      const response = await fetch('/api/papers?unapproved=true');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch pending papers');
+      }
+
+      if (data.success && data.papers) {
+        setPendingPapers(data.papers);
+      } else {
+        setPendingPapers([]);
+      }
+    } catch (err) {
+      console.error('Error fetching pending papers:', err);
+      setApprovalError(err.message || 'Failed to load pending papers.');
+      setPendingPapers([]);
+    } finally {
+      setLoadingPapers(false);
+    }
+  };
+
+  // Handle approval/rejection
+  const handleApproval = async (paperId, approved) => {
+    try {
+      setApprovalError(null);
+
+      const response = await fetch('/api/papers', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paperId: paperId,
+          adminApproved: approved,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
+        throw new Error(errorData.error || `Failed to ${approved ? 'approve' : 'reject'} paper.`);
+      }
+
+      // Refresh the pending papers list
+      await fetchPendingPapers();
+    } catch (err) {
+      console.error('Error updating paper approval:', err);
+      setApprovalError(err.message || `Failed to ${approved ? 'approve' : 'reject'} paper.`);
+    }
+  };
+
+  // Upload form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear errors when user starts typing
     if (error) setError(null);
   };
 
-  /**
-   * Handles file selection
-   * @param {Event} e - Change event from file input
-   */
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) {
@@ -107,15 +169,13 @@ export default function AdminUpload() {
       return;
     }
 
-    // Validate file type
     if (selectedFile.type !== 'application/pdf') {
       setError('Please select a PDF file only.');
       setFile(null);
       return;
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    const maxSize = 10 * 1024 * 1024;
     if (selectedFile.size > maxSize) {
       setError('File size must be less than 10MB.');
       setFile(null);
@@ -126,32 +186,20 @@ export default function AdminUpload() {
     if (error) setError(null);
   };
 
-  /**
-   * Converts semester string to number
-   * Handles formats like "1", "1st Sem", "Semester 1", etc.
-   * @param {string} semesterStr - Semester string from form
-   * @returns {number} Semester number (1-8)
-   */
   const parseSemester = (semesterStr) => {
-    // Extract first number from string
     const match = semesterStr.match(/\d+/);
     if (match) {
       const num = parseInt(match[0], 10);
       return num >= 1 && num <= 8 ? num : 1;
     }
-    return 1; // Default to 1 if parsing fails
+    return 1;
   };
 
-  /**
-   * Handles form submission and file upload
-   * @param {Event} e - Submit event from form
-   */
   const handleUpload = async (e) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    // Validation
     if (!file) {
       setError('Please select a PDF file to upload.');
       return;
@@ -166,33 +214,24 @@ export default function AdminUpload() {
       setError('Please fill in all required fields including department and program.');
       return;
     }
-    
-    // Validate department
-    const validDepartments = ['CS', 'mining', 'cement', 'others'];
-    if (!validDepartments.includes(formData.department)) {
-      setError(`Invalid department. Must be one of: ${validDepartments.join(', ')}`);
-      return;
-    }
 
     setLoading(true);
 
     try {
-      // --- STEP 1: Upload file to Supabase Storage ---
       const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
-      const bucketName = 'Vault'; // Storage bucket name
+      const bucketName = 'Vault';
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucketName)
         .upload(filename, file, {
           cacheControl: '3600',
-          upsert: false // Prevent overwriting existing files
+          upsert: false
         });
 
       if (uploadError) {
         throw new Error(`Supabase upload failed: ${uploadError.message}`);
       }
 
-      // --- STEP 2: Get Public URL from Supabase Storage ---
       const { data: { publicUrl } } = supabase.storage
         .from(bucketName)
         .getPublicUrl(filename);
@@ -201,9 +240,6 @@ export default function AdminUpload() {
         throw new Error('Failed to generate public URL for uploaded file.');
       }
 
-      console.log('File uploaded successfully to:', publicUrl);
-
-      // --- STEP 3: Save paper metadata to MongoDB via API ---
       const semesterNum = parseSemester(formData.semester);
       const yearNum = parseInt(formData.year, 10);
 
@@ -230,11 +266,8 @@ export default function AdminUpload() {
       
       const result = await response.json();
 
-      // Success!
       setSuccess(`Paper "${formData.title}" uploaded successfully!`);
-      console.log('Paper saved to database:', result.paper);
 
-      // Reset form
       setFormData({ 
         title: '', 
         subject: '', 
@@ -245,21 +278,17 @@ export default function AdminUpload() {
       });
       setFile(null);
       
-      // Reset file input
       const fileInput = document.querySelector('input[type="file"]');
       if (fileInput) fileInput.value = '';
 
     } catch (error) {
       console.error('Upload error:', error);
-      // Provide user-friendly error messages
       let errorMessage = 'Upload failed. Please try again.';
       
       if (error.message) {
         errorMessage = error.message;
       } else if (error instanceof TypeError && error.message.includes('fetch')) {
         errorMessage = 'Network error. Please check your connection and try again.';
-      } else if (error.name === 'ValidationError') {
-        errorMessage = 'Validation error. Please check all fields and try again.';
       }
       
       setError(errorMessage);
@@ -271,11 +300,11 @@ export default function AdminUpload() {
   // Show loading state while checking authentication
   if (status === 'loading' || !isAuthorized) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-200 text-center">
           <div className="flex flex-col items-center gap-4">
             <svg 
-              className="animate-spin h-8 w-8 text-indigo-600" 
+              className="animate-spin h-8 w-8 text-emerald-600" 
               xmlns="http://www.w3.org/2000/svg" 
               fill="none" 
               viewBox="0 0 24 24"
@@ -304,7 +333,7 @@ export default function AdminUpload() {
   // Show error if access denied
   if (error && error.includes('Access denied')) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-red-200">
           <div className="text-center">
             <div className="mb-4">
@@ -322,212 +351,367 @@ export default function AdminUpload() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-200">
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-6 border-b pb-4">
-          <h1 className="text-2xl font-bold text-gray-800">Admin Upload Panel</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Upload scanned exam papers to the secure vault.
-          </p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+          <p className="text-gray-600">Manage papers and review pending submissions</p>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800">{error}</p>
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('upload')}
+              className={`flex-1 px-6 py-4 text-sm font-semibold transition-colors ${
+                activeTab === 'upload'
+                  ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                  : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <FiUpload size={18} />
+                <span>Upload Paper</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('approval')}
+              className={`flex-1 px-6 py-4 text-sm font-semibold transition-colors ${
+                activeTab === 'approval'
+                  ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                  : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <FiCheckCircle size={18} />
+                <span>Approve Papers</span>
+                {pendingPapers.length > 0 && (
+                  <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-600 text-white">
+                    {pendingPapers.length}
+                  </span>
+                )}
+              </div>
+            </button>
           </div>
-        )}
 
-        {/* Success Message */}
-        {success && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800">{success}</p>
-          </div>
-        )}
-        
-        {/* Upload Form */}
-        <form onSubmit={handleUpload} className="space-y-4">
-          {/* File Input */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 text-center">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {file ? (
-                <span className="text-indigo-600">{file.name}</span>
-              ) : (
-                "Click to select PDF Document"
-              )}
-            </label>
-            <input 
-              type="file" 
-              accept=".pdf"
-              onChange={handleFileChange}
-              disabled={loading}
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            {file && (
-              <p className="text-xs text-gray-500 mt-2">
-                Size: {(file.size / 1024 / 1024).toFixed(2)} MB
-              </p>
+          {/* Tab Content */}
+          <div className="p-6">
+            {/* Upload Tab */}
+            {activeTab === 'upload' && (
+              <div>
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
+
+                {success && (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800">{success}</p>
+                  </div>
+                )}
+                
+                <form onSubmit={handleUpload} className="space-y-4">
+                  <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 text-center">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {file ? (
+                        <span className="text-emerald-600">{file.name}</span>
+                      ) : (
+                        "Click to select PDF Document"
+                      )}
+                    </label>
+                    <input 
+                      type="file" 
+                      accept=".pdf"
+                      onChange={handleFileChange}
+                      disabled={loading}
+                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    {file && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Size: {(file.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                      Paper Title <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      name="title" 
+                      type="text"
+                      required
+                      value={formData.title} 
+                      onChange={handleChange}
+                      placeholder="e.g. Data Structures Mid-Term"
+                      disabled={loading}
+                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                        Subject Code <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        name="subject"
+                        type="text"
+                        required 
+                        value={formData.subject} 
+                        onChange={handleChange}
+                        placeholder="e.g. CS101"
+                        disabled={loading}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                        Year <span className="text-red-500">*</span>
+                      </label>
+                      <input 
+                        name="year" 
+                        type="number"
+                        required
+                        min="2000"
+                        max="2100"
+                        value={formData.year} 
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                        Semester <span className="text-red-500">*</span>
+                      </label>
+                      <select 
+                        name="semester" 
+                        value={formData.semester} 
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                          <option key={num} value={num.toString()}>
+                            Semester {num}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                        Department <span className="text-red-500">*</span>
+                      </label>
+                      <select 
+                        name="department" 
+                        value={formData.department} 
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="CS">CS</option>
+                        <option value="mining">Mining</option>
+                        <option value="cement">Cement</option>
+                        <option value="others">Others</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                        Program <span className="text-red-500">*</span>
+                      </label>
+                      <select 
+                        name="program" 
+                        value={formData.program} 
+                        onChange={handleChange}
+                        disabled={loading}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <option value="B.tech">B.tech</option>
+                        <option value="BE">BE</option>
+                        <option value="BSc">BSc</option>
+                        <option value="M.tech">M.tech</option>
+                        <option value="ME">ME</option>
+                        <option value="MSc">MSc</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={loading || !supabase}
+                    className={`w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white transition-all transform hover:scale-[1.02] ${
+                      loading || !supabase
+                        ? 'bg-emerald-400 cursor-not-allowed' 
+                        : 'bg-emerald-600 hover:bg-emerald-700'
+                    }`}
+                  >
+                    {loading ? (
+                      <>
+                        <svg 
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          fill="none" 
+                          viewBox="0 0 24 24"
+                        >
+                          <circle 
+                            className="opacity-25" 
+                            cx="12" 
+                            cy="12" 
+                            r="10" 
+                            stroke="currentColor" 
+                            strokeWidth="4"
+                          />
+                          <path 
+                            className="opacity-75" 
+                            fill="currentColor" 
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : (
+                      'Upload Paper'
+                    )}
+                  </button>
+
+                  <p className="text-xs text-gray-500 text-center mt-4">
+                    * Required fields. Maximum file size: 10MB
+                  </p>
+                </form>
+              </div>
+            )}
+
+            {/* Approval Tab */}
+            {activeTab === 'approval' && (
+              <div>
+                {approvalError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{approvalError}</p>
+                  </div>
+                )}
+
+                {loadingPapers ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="flex flex-col items-center gap-4">
+                      <svg 
+                        className="animate-spin h-8 w-8 text-emerald-600" 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        fill="none" 
+                        viewBox="0 0 24 24"
+                      >
+                        <circle 
+                          className="opacity-25" 
+                          cx="12" 
+                          cy="12" 
+                          r="10" 
+                          stroke="currentColor" 
+                          strokeWidth="4"
+                        />
+                        <path 
+                          className="opacity-75" 
+                          fill="currentColor" 
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <p className="text-gray-600">Loading pending papers...</p>
+                    </div>
+                  </div>
+                ) : pendingPapers.length === 0 ? (
+                  <div className="text-center py-20">
+                    <FiCheckCircle className="mx-auto text-gray-400 mb-4" size={48} />
+                    <p className="text-gray-600 text-lg font-medium mb-2">No pending papers</p>
+                    <p className="text-gray-500 text-sm">All papers have been reviewed.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="text-sm text-gray-600 mb-4">
+                      {pendingPapers.length} {pendingPapers.length === 1 ? 'paper' : 'papers'} pending approval
+                    </div>
+                    {pendingPapers.map((paper) => (
+                      <div 
+                        key={paper.id} 
+                        className="bg-gray-50 border border-gray-200 rounded-lg p-5 hover:border-emerald-200 transition"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <FiFileText className="text-emerald-600 shrink-0" size={20} />
+                              <h3 className="font-semibold text-gray-900">{paper.title}</h3>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600 mb-3">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Subject:</span>
+                                <span>{paper.subject}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Semester:</span>
+                                <span>{paper.semester}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Year:</span>
+                                <span>{paper.year}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Dept:</span>
+                                <span>{paper.department}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-gray-500">
+                              <div className="flex items-center gap-1">
+                                <FiUser size={14} />
+                                <span>{paper.uploadedBy}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <FiClock size={14} />
+                                <span>{new Date(paper.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            {paper.url && (
+                              <a
+                                href={paper.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 mt-3 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                              >
+                                <FiFileText size={14} />
+                                View PDF
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 shrink-0">
+                            <button
+                              onClick={() => handleApproval(paper.id, true)}
+                              className="flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
+                            >
+                              <FiCheckCircle size={16} />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleApproval(paper.id, false)}
+                              className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                            >
+                              <FiXCircle size={16} />
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
-
-          {/* Paper Title Input */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-              Paper Title <span className="text-red-500">*</span>
-            </label>
-            <input 
-              name="title" 
-              type="text"
-              required
-              value={formData.title} 
-              onChange={handleChange}
-              placeholder="e.g. Data Structures Mid-Term"
-              disabled={loading}
-              className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-            />
-          </div>
-
-          {/* Subject and Year Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                Subject Code <span className="text-red-500">*</span>
-              </label>
-              <input 
-                name="subject"
-                type="text"
-                required 
-                value={formData.subject} 
-                onChange={handleChange}
-                placeholder="e.g. CS101"
-                disabled={loading}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                Year <span className="text-red-500">*</span>
-              </label>
-              <input 
-                name="year" 
-                type="number"
-                required
-                min="2000"
-                max="2100"
-                value={formData.year} 
-                onChange={handleChange}
-                disabled={loading}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-              />
-            </div>
-          </div>
-
-          {/* Semester, Department, and Program Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                Semester <span className="text-red-500">*</span>
-              </label>
-              <select 
-                name="semester" 
-                value={formData.semester} 
-                onChange={handleChange}
-                disabled={loading}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                  <option key={num} value={num.toString()}>
-                    Semester {num}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                Department <span className="text-red-500">*</span>
-              </label>
-              <select 
-                name="department" 
-                value={formData.department} 
-                onChange={handleChange}
-                disabled={loading}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="CS">CS</option>
-                <option value="mining">Mining</option>
-                <option value="cement">Cement</option>
-                <option value="others">Others</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                Program <span className="text-red-500">*</span>
-              </label>
-              <select 
-                name="program" 
-                value={formData.program} 
-                onChange={handleChange}
-                disabled={loading}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="B.tech">B.tech</option>
-                <option value="BE">BE</option>
-                <option value="BSc">BSc</option>
-                <option value="M.tech">M.tech</option>
-                <option value="ME">ME</option>
-                <option value="MSc">MSc</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <button 
-            type="submit" 
-            disabled={loading || !supabase}
-            className={`w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white transition-all transform hover:scale-[1.02] ${
-              loading || !supabase
-                ? 'bg-indigo-400 cursor-not-allowed' 
-                : 'bg-indigo-600 hover:bg-indigo-700'
-            }`}
-          >
-            {loading ? (
-              <>
-                <svg 
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  fill="none" 
-                  viewBox="0 0 24 24"
-                >
-                  <circle 
-                    className="opacity-25" 
-                    cx="12" 
-                    cy="12" 
-                    r="10" 
-                    stroke="currentColor" 
-                    strokeWidth="4"
-                  />
-                  <path 
-                    className="opacity-75" 
-                    fill="currentColor" 
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Uploading...
-              </>
-            ) : (
-              'Upload Paper'
-            )}
-          </button>
-
-          {/* Info Note */}
-          <p className="text-xs text-gray-500 text-center mt-4">
-            * Required fields. Maximum file size: 10MB
-          </p>
-        </form>
+        </div>
       </div>
     </div>
   );

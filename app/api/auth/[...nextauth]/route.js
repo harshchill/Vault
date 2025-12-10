@@ -25,16 +25,23 @@ export const authoptions = NextAuth({
         try {
           await connectDB();
           const dbUser = await User.findOne({ email: user.email });
+          const avatar = user.image || user.avatar_url || token.image;
           if (dbUser) {
             token.role = dbUser.role || 'user';
             token.name = dbUser.name || user.name;
+            token.image = dbUser.image || avatar;
+            // Derive firstName for convenience
+            token.firstName = (token.name || user.name || '')?.split(' ')[0] || (user.email?.split("@")[0]) || 'User';
           } else {
             token.role = 'user';
             token.name = user.name;
+            token.image = avatar;
+            token.firstName = (user.name || '')?.split(' ')[0] || (user.email?.split("@")[0]) || 'User';
           }
         } catch (error) {
           console.error('Error in jwt callback:', error);
           token.role = 'user';
+          token.firstName = (token.name || token.email?.split("@")[0] || 'User');
         }
       }  else {
         // On subsequent requests, always fetch latest role from database
@@ -45,6 +52,8 @@ export const authoptions = NextAuth({
           if (dbUser) {
             token.role = dbUser.role || 'user';
             token.name = dbUser.name || token.name;
+            token.image = dbUser.image || token.image;
+            token.firstName = (dbUser.name || token.name || '')?.split(' ')[0] || (token.email?.split("@")[0]) || 'User';
           }
         } catch (error) {
           console.error('Error fetching user role in jwt callback:', error);
@@ -57,6 +66,7 @@ export const authoptions = NextAuth({
       try {
         await connectDB();
         const currentUser = await User.findOne({ email: user.email });
+        const avatar = user.image || user.avatar_url;
         
         if (!currentUser) {
           // Use name from provider, fallback to email prefix if name not available
@@ -66,13 +76,18 @@ export const authoptions = NextAuth({
             email: user.email,
             name: userName,
             role: 'user', // Default role for new users
+            image: avatar || undefined,
           });
         } else {
           // Update name if it's missing or if provider has a better name
           if (user.name && (!currentUser.name || currentUser.name === currentUser.email?.split("@")[0])) {
             currentUser.name = user.name;
-            await currentUser.save();
           }
+          // Backfill image if missing
+          if (!currentUser.image && (avatar)) {
+            currentUser.image = avatar;
+          }
+          await currentUser.save();
         }
         return true;
       } catch (error) {
@@ -85,6 +100,8 @@ export const authoptions = NextAuth({
       if (token) {
         session.user.role = token.role || 'user';
         session.user.name = token.name || session.user.name || session.user.email?.split("@")[0];
+        session.user.image = token.image || session.user.image || null;
+        session.user.firstName = token.firstName || (session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
       } else {
         // Fallback: try to get from database
         try {
@@ -93,14 +110,18 @@ export const authoptions = NextAuth({
           if (dbUser) {
             session.user.name = dbUser.name || session.user.name || session.user.email?.split("@")[0];
             session.user.role = dbUser.role || 'user';
+            session.user.image = dbUser.image || session.user.image || null;
+            session.user.firstName = (dbUser.name || session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
           } else {
             session.user.name = session.user.name || session.user.email?.split("@")[0];
             session.user.role = 'user';
+            session.user.firstName = (session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
           }
         } catch (error) {
           console.error('Error in session callback:', error);
           session.user.name = session.user.name || session.user.email?.split("@")[0];
           session.user.role = 'user';
+          session.user.firstName = (session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
         }
       }
       return session;

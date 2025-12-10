@@ -70,6 +70,12 @@ export default function Home() {
                   Explore papers
                   <FiArrowRight className="group-hover:translate-x-1 transition-transform" size={18} />
                 </Link>
+                <Link href="/upload" className="button button-ghost">
+                  Contribute
+                </Link>
+                <Link href="/contributions" className="button button-ghost">
+                  Leaderboard
+                </Link>
                 {!isAuthenticated ? (
                   <Link href="/auth" className="button button-ghost">
                     Login / Signup
@@ -247,6 +253,12 @@ export default function Home() {
               <Link href="/papers" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
                 View collection
               </Link>
+              <Link href="/upload" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
+                Contribute
+              </Link>
+              <Link href="/contributions" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
+                Leaderboard
+              </Link>
             </div>
           </div>
         </section>
@@ -269,6 +281,8 @@ export default function Home() {
                 Browse Papers
                 <FiArrowRight size={20} />
               </Link>
+              <Link href="/upload" className="button button-ghost">Contribute</Link>
+              <Link href="/contributions" className="button button-ghost">Leaderboard</Link>
             </div>
           </div>
         </section>

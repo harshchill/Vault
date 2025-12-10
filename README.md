@@ -14,6 +14,8 @@ Demo locally: http://localhost:3000
 - **Admin-only upload portal** to add new papers: uploads PDF to Supabase and metadata to MongoDB (`app/admin/page.js`).
 - **Role‑based access control** powered by NextAuth + JWT + database role lookup (`app/api/auth/[...nextauth]/route.js`, `middleware.js`).
 - **API routes** for creating and listing papers with validation (`app/api/papers/route.js`).
+- **User uploads** page for authenticated users (`/upload`) that submits papers for admin review.
+- **Contributions leaderboard** at `/contributions` aggregating approved uploads by user with avatars and ranks.
 
 
 ## 🧰 Tech Stack
@@ -40,11 +42,14 @@ See `package.json` for versions.
   - `app/papers/[id]/page.js`: Auth-required PDF viewer page using `PdfViewer`.
   - `app/auth/page.js`: Sign in (Google/GitHub) and email UI.
   - `app/admin/page.js`: Admin upload workflow (Supabase + MongoDB) with validation.
+  - `app/upload/page.js`: User upload (auth required) — submissions await admin approval.
+  - `app/contributions/page.js`: Top contributors leaderboard (approved uploads only).
 
 - **API & Data**
   - `app/api/papers/route.js`: REST-style POST (create) and GET (list with filters).
+  - `app/api/contributions/route.js`: Aggregation for the leaderboard.
   - `models/paper.js`: Paper schema (title, subject, semester, year, department, program, url).
-  - `models/user.js`: User schema (email, name, role: user|admin).
+  - `models/user.js`: User schema (email, name, role: user|admin, image?).
   - `db/connectDb.js`: Mongoose connection (dbName: `Vault-project`).
 
 - **Auth & Security**
@@ -58,6 +63,7 @@ See `package.json` for versions.
 - On first sign-in, a `User` document is created with `role: 'user'`.
 - To grant admin access, update the user in MongoDB and set `role` to `admin`.
 - Middleware enforces admin access on `/admin` and redirects others to `/auth`.
+- Profile images: we store `image` on the user when available and also populate session with `image` and `firstName`. We fall back to provider `avatar_url` if `image` is missing.
 
 
 ## 📦 Features You Built
@@ -82,11 +88,13 @@ See `package.json` for versions.
 - `/papers` — Full library view with filters and guarded viewing.
 - `/papers/[id]` — PDF viewer (requires login).
 - `/admin` — Admin upload portal (requires admin role).
+- `/upload` — User uploads (requires login, pending admin approval).
+- `/contributions` — Top contributors leaderboard.
 
 
 ## 🧪 API Endpoints
 
-All under `app/api/papers/route.js`.
+Primary papers endpoints under `app/api/papers/route.js`.
 
 - **GET /api/papers** — List papers (sorted by `createdAt` desc)
   - Query params: `semester`, `year`, `subject`, `department`, `program`
@@ -96,6 +104,9 @@ All under `app/api/papers/route.js`.
   - Body: `{ title, subject, semester (1–8), year (2000–2100), department ('CS'|'mining'|'cement'|'others'), program, url }`
   - Validation: required fields, enums, ranges.
   - Returns: `{ success, message, paper }` with created entity.
+
+- **GET /api/contributions** — Leaderboard aggregation
+  - Returns: `{ success, contributors: [{ rank, email, count, firstName, image }] }`
 
 
 ## 🗃️ Data Models
@@ -114,6 +125,7 @@ All under `app/api/papers/route.js`.
   - `email: String (unique)`
   - `name: String`
   - `role: 'user' | 'admin'`
+  - `image?: String` (avatar URL from provider)
 
 
 ## ⚙️ Environment Variables
@@ -139,6 +151,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 Notes:
 - Create a Supabase Storage bucket named `Vault` and allow authenticated uploads.
 - Ensure CORS/public access as appropriate for PDF viewing.
+- If using `next/image` for provider avatars, ensure external domains are allowed in `next.config.mjs`:
+  ```js
+  export default {
+    images: {
+      domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
+    },
+  };
+  ```
 
 
 ## 🚀 Getting Started (Local)

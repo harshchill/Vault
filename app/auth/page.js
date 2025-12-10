@@ -65,24 +65,6 @@ export default function AuthPage() {
             Continue with GitHub
           </button>
         </div>
-        <div className="pt-4 border-t border-slate-200 space-y-3">
-          <div className="grid md:grid-cols-2 gap-3">
-            <input
-              className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-              placeholder="Email"
-              type="email"
-            />
-            <input
-              className="w-full rounded-lg border border-slate-200 px-4 py-3 text-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-              placeholder="Password"
-              type="password"
-            />
-          </div>
-          <button className="button button-ghost w-full justify-center border border-emerald-100">
-            <FiMail size={18} />
-            Continue with email
-          </button>
-        </div>
         
       </div>
     </div>
