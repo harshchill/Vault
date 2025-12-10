@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SessionProvider from "./providers/SessionProvider";
+import { Analytics } from '@vercel/analytics/next';
 import Navbar from "./component/Navbar";
 
 const geistSans = Geist({
@@ -29,6 +30,7 @@ export default function RootLayout({ children }) {
             <Navbar />
             <main>
               {children}
+              <Analytics />
             </main>
           </SessionProvider>
         </div>
