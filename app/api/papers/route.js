@@ -13,7 +13,7 @@ import Paper from '@/models/paper';
  *   subject: string (required),
  *   semester: number (required, 1-8),
  *   year: number (required),
- *   department: string (required, CS|mining|cement|others),
+ *   specialization: string (required), // previously named `department`
  *   program: string (required),
  *   url: string (required) - URL to the PDF file
  * }
@@ -43,21 +43,21 @@ export async function POST(request) {
 
     // Parse request body
     const body = await request.json();
-    const { title, subject, semester, year, department, program, url } = body;
+    const { title, subject, semester, year, specialization, department, program, url } = body;
 
     // Validate required fields
-    if (!title || !subject || !semester || !year || !department || !program || !url) {
+    const effectiveSpecialization = (specialization ?? department)?.toString().trim();
+    if (!title || !subject || !semester || !year || !effectiveSpecialization || !program || !url) {
       return NextResponse.json(
-        { error: 'Missing required fields: title, subject, semester, year, department, program, url' },
+        { error: 'Missing required fields: title, subject, semester, year, specialization, program, url' },
         { status: 400 }
       );
     }
-    
-    // Validate department
-    const validDepartments = ['CS', 'mining', 'cement', 'others'];
-    if (!validDepartments.includes(department)) {
+
+    // Basic specialization validation (non-empty string)
+    if (typeof effectiveSpecialization !== 'string' || effectiveSpecialization.length === 0) {
       return NextResponse.json(
-        { error: `Department must be one of: ${validDepartments.join(', ')}` },
+        { error: 'Specialization must be a non-empty string' },
         { status: 400 }
       );
     }
@@ -86,7 +86,8 @@ export async function POST(request) {
       subject: subject.trim(),
       semester: semesterNum,
       year: yearNum,
-      department: department,
+      // Backward-compat: store under existing schema field `department`
+      department: effectiveSpecialization,
       program: program.trim(),
       url: url.trim(),
       uploadedBy: token.email, // Email of the user who uploaded
@@ -103,6 +104,8 @@ export async function POST(request) {
           subject: paper.subject,
           semester: paper.semester,
           year: paper.year,
+          // Expose both during transition
+          specialization: paper.department,
           department: paper.department,
           program: paper.program,
           url: paper.url,
@@ -140,7 +143,8 @@ export async function POST(request) {
  * - semester: number - Filter by semester (1-8)
  * - year: number - Filter by year
  * - subject: string - Filter by subject code
- * - department: string - Filter by department (CS|mining|cement|others)
+ * - specialization: string - Filter by specialization
+ * - department: string - Deprecated; still supported for backward compatibility
  * - program: string - Filter by program
  * 
  * Returns:
@@ -156,6 +160,7 @@ export async function GET(request) {
     const semester = searchParams.get('semester');
     const year = searchParams.get('year');
     const subject = searchParams.get('subject');
+    const specialization = searchParams.get('specialization');
     const department = searchParams.get('department');
     const program = searchParams.get('program');
     const unapproved = searchParams.get('unapproved'); // For admin to get unapproved papers
@@ -174,9 +179,9 @@ export async function GET(request) {
     if (subject) {
       filter.subject = { $regex: subject, $options: 'i' }; // Case-insensitive search
     }
-    if (department) {
-      filter.department = department;
-    }
+    // Map `specialization` (or deprecated `department`) to DB field `department`
+    const specValue = specialization ?? department;
+    if (specValue) filter.department = specValue;
     if (program) {
       filter.program = { $regex: program, $options: 'i' }; // Case-insensitive search
     }
@@ -196,6 +201,7 @@ export async function GET(request) {
           subject: paper.subject,
           semester: paper.semester,
           year: paper.year,
+          specialization: paper.department,
           department: paper.department,
           program: paper.program,
           url: paper.url,
@@ -295,6 +301,7 @@ export async function PATCH(request) {
           subject: paper.subject,
           semester: paper.semester,
           year: paper.year,
+          specialization: paper.department,
           department: paper.department,
           program: paper.program,
           url: paper.url,

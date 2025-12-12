@@ -5,6 +5,111 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { FiUpload, FiFileText } from 'react-icons/fi';
 
+// Program → Specialization map
+const UNIVERSITY_COURSES = {
+  "B.Tech": [
+    "CSE",
+    "CSE (AI & Data Science)",
+    "CSE (Cyber Security)",
+    "AI & Machine Learning (IBM)",
+    "Mining Engineering",
+    "Civil Engineering",
+    "Mechanical Engineering",
+    "Electrical Engineering",
+    "Cement Technology",
+    "Agricultural Engineering",
+    "Food Technology",
+    "Biotechnology"
+  ],
+  "B.Tech (Lateral Entry)": [
+    "CSE",
+    "Civil Engineering",
+    "Electrical Engineering",
+    "Mechanical Engineering",
+    "Mining Engineering",
+    "Cement Technology",
+    "Food Technology",
+    "Agricultural Engineering"
+  ],
+  "M.Tech": [
+    "Computer Science",
+    "Mining Engineering",
+    "Mechanical Engineering",
+    "Agricultural Engineering",
+    "Biotechnology"
+  ],
+  "Polytechnic Diploma": [
+    "Computer Science",
+    "Mining Engineering",
+    "Mine Surveying",
+    "Civil Engineering",
+    "Electrical Engineering",
+    "Mechanical Engineering",
+    "Cement Technology",
+    "Food Technology",
+    "Agricultural Engineering"
+  ],
+  "BCA": [
+    "BCA (Hons)",
+    "BCA (Hons) AI & Machine Learning"
+  ],
+  "MCA": ["Master of Computer Applications"],
+  "B.Sc.": [
+    "Computer Science (CS)",
+    "Information Technology (IT) Hons",
+    "Agriculture (Hons)",
+    "Horticulture (Hons)",
+    "Food Technology",
+    "Biotechnology (Hons)",
+    "Microbiology",
+    "Geology",
+    "Math (Hons)",
+    "Biology",
+    "Seed Technology"
+  ],
+  "M.Sc.": [
+    "Computer Science",
+    "Food Technology",
+    "Biotechnology",
+    "Microbiology",
+    "Environment",
+    "Chemistry",
+    "Physics",
+    "Mathematics",
+    "Yoga Science",
+    "Agriculture (Agronomy)",
+    "Agriculture (Soil Science)",
+    "Agriculture (Genetics)"
+  ],
+  "Management": [
+    "BBA (Hons)",
+    "BBA (Tourism & Hotel Mgmt)",
+    "MBA (General)",
+    "MBA (Logistics & Supply Chain)",
+    "MBA (Production & Operation)",
+    "MBA (Executive)"
+  ],
+  "Commerce": [
+    "B.Com (Computer Application)",
+    "B.Com (Economics)",
+    "B.Com (Financial Mgmt)",
+    "B.Com (Hons)",
+    "M.Com"
+  ],
+  "Pharmacy": [
+    "D.Pharma",
+    "B.Pharma",
+    "M.Pharma (Pharmaceutics)",
+    "M.Pharma (Pharmaceutical Chemistry)"
+  ],
+  "Agriculture": [
+      "B.Sc. (Hons) Agriculture",
+      "B.Tech Agricultural Engg",
+      "M.Sc. Agronomy",
+      "M.Sc. Soil Science"
+  ]
+};
+
 export default function UploadPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -16,9 +121,11 @@ export default function UploadPage() {
     subject: '',
     semester: '1',
     year: new Date().getFullYear(),
-    department: 'CS',
-    program: 'B.tech',
+    specialization: '',
+    program: 'B.Tech',
+    customSpecialization: '',
   });
+  const [specializationOptions, setSpecializationOptions] = useState([]);
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -49,10 +156,29 @@ export default function UploadPage() {
     }
   }, []);
 
+  // Update specialization options when program changes
+  useEffect(() => {
+    const options = UNIVERSITY_COURSES[formData.program] || [];
+    setSpecializationOptions([...options, 'Other']);
+    // Reset specialization when program changes
+    setFormData((prev) => ({ ...prev, specialization: '', customSpecialization: '' }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.program]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     if (error) setError(null);
+  };
+
+  const handleProgramChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, program: value }));
+  };
+
+  const handleSpecializationChange = (e) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, specialization: value, customSpecialization: '' }));
   };
 
   const handleFileChange = (e) => {
@@ -103,8 +229,9 @@ export default function UploadPage() {
       return;
     }
 
-    if (!formData.title.trim() || !formData.subject.trim() || !formData.department || !formData.program.trim()) {
-      setError('Please fill in all required fields including department and program.');
+    const specValue = formData.specialization === 'Other' ? formData.customSpecialization.trim() : formData.specialization;
+    if (!formData.title.trim() || !formData.subject.trim() || !specValue || !formData.program.trim()) {
+      setError('Please fill in all required fields including specialization and program.');
       return;
     }
 
@@ -137,7 +264,7 @@ export default function UploadPage() {
           subject: formData.subject.trim(),
           semester: semesterNum,
           year: yearNum,
-          department: formData.department,
+          specialization: specValue,
           program: formData.program.trim(),
           url: publicUrl,
         }),
@@ -150,7 +277,7 @@ export default function UploadPage() {
 
       setSuccess(`Paper "${formData.title}" uploaded! It will be visible after admin approval.`);
 
-      setFormData({ title: '', subject: '', semester: '1', year: new Date().getFullYear(), department: 'CS', program: 'B.tech' });
+      setFormData({ title: '', subject: '', semester: '1', year: new Date().getFullYear(), specialization: '', program: 'B.Tech', customSpecialization: '' });
       setFile(null);
       const fileInput = document.querySelector('input[type="file"]');
       if (fileInput) fileInput.value = '';
@@ -281,41 +408,47 @@ export default function UploadPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                  Department <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  disabled={loading}
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value="CS">CS</option>
-                  <option value="mining">Mining</option>
-                  <option value="cement">Cement</option>
-                  <option value="others">Others</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
                   Program <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="program"
                   value={formData.program}
-                  onChange={handleChange}
+                  onChange={handleProgramChange}
                   disabled={loading}
                   className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="B.tech">B.tech</option>
-                  <option value="BE">BE</option>
-                  <option value="BSc">BSc</option>
-                  <option value="M.tech">M.tech</option>
-                  <option value="ME">ME</option>
-                  <option value="MSc">MSc</option>
-                  <option value="Other">Other</option>
+                  {Object.keys(UNIVERSITY_COURSES).map((prog) => (
+                    <option key={prog} value={prog}>{prog}</option>
+                  ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                  Specialization <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="specialization"
+                  value={formData.specialization}
+                  onChange={handleSpecializationChange}
+                  disabled={loading || specializationOptions.length === 0}
+                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="" disabled>Select specialization</option>
+                  {specializationOptions.map((spec) => (
+                    <option key={spec} value={spec}>{spec}</option>
+                  ))}
+                </select>
+                {formData.specialization === 'Other' && (
+                  <input
+                    type="text"
+                    name="customSpecialization"
+                    value={formData.customSpecialization}
+                    onChange={handleChange}
+                    placeholder="Enter specialization"
+                    className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white"
+                  />
+                )}
               </div>
             </div>
 

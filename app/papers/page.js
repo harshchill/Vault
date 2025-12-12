@@ -89,9 +89,9 @@ export default function PapersPage() {
       result = result.filter((paper) => paper.semester === semesterNum);
     }
 
-    // Filter by department
+    // Filter by specialization (fallback to department)
     if (selectedDepartment !== "All departments") {
-      result = result.filter((paper) => paper.department === selectedDepartment);
+      result = result.filter((paper) => (paper.specialization || paper.department) === selectedDepartment);
     }
 
     // Filter by program
@@ -103,6 +103,31 @@ export default function PapersPage() {
 
     return result;
   }, [papers, selectedSemester, selectedDepartment, selectedProgram]);
+
+  // Dynamic options for Program and Specialization filters
+  const programOptions = useMemo(() => {
+    const set = new Set();
+    papers.forEach((p) => { if (p.program) set.add(p.program); });
+    return ["All programs", ...Array.from(set)];
+  }, [papers]);
+
+  const specializationOptions = useMemo(() => {
+    const set = new Set();
+    const programFilter = selectedProgram !== "All programs" ? selectedProgram : null;
+    papers.forEach((p) => {
+      if (programFilter && !(p.program || "").toLowerCase().includes(programFilter.toLowerCase())) return;
+      const spec = p.specialization || p.department;
+      if (spec) set.add(spec);
+    });
+    return ["All departments", ...Array.from(set)];
+  }, [papers, selectedProgram]);
+
+  // Ensure current specialization selection stays valid when program changes
+  useEffect(() => {
+    if (!specializationOptions.includes(selectedDepartment)) {
+      setSelectedDepartment("All departments");
+    }
+  }, [specializationOptions]);
 
   /**
    * Handles navigating to the paper view page
@@ -143,7 +168,7 @@ export default function PapersPage() {
           <span className="pill">Browse collection</span>
           <h1 className="text-3xl md:text-4xl font-semibold text-slate-900">Previous semester papers</h1>
           <p className="text-slate-600">
-            Filter by semester, department, or program to quickly find what you need.
+            Filter by semester, specialization, or program to quickly find what you need.
           </p>
         </div>
         
@@ -166,7 +191,7 @@ export default function PapersPage() {
             </select>
           </div>
           
-          {/* Department Filter */}
+          {/* Specialization Filter */}
           <div className="card p-4 flex items-center gap-3">
             <FiFilter className="text-emerald-600 shrink-0" size={20} />
             <select
@@ -175,11 +200,11 @@ export default function PapersPage() {
               disabled={loading}
               className="bg-transparent outline-none text-sm font-medium text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed w-full"
             >
-              <option value="All departments">All departments</option>
-              <option value="CS">CS</option>
-              <option value="mining">Mining</option>
-              <option value="cement">Cement</option>
-              <option value="others">Others</option>
+              {specializationOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt === 'All departments' ? 'All specializations' : opt}
+                </option>
+              ))}
             </select>
           </div>
           
@@ -192,13 +217,9 @@ export default function PapersPage() {
               disabled={loading}
               className="bg-transparent outline-none text-sm font-medium text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed w-full"
             >
-              <option value="All programs">All programs</option>
-              <option value="B.tech">B.tech</option>
-              <option value="BE">BE</option>
-              <option value="BSc">BSc</option>
-              <option value="M.tech">M.tech</option>
-              <option value="ME">ME</option>
-              <option value="MSc">MSc</option>
+              {programOptions.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -306,9 +327,9 @@ export default function PapersPage() {
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1">
-                        {paper.department && (
+                        {(paper.specialization || paper.department) && (
                           <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                            {paper.department}
+                            {paper.specialization || paper.department}
                           </span>
                         )}
                         {paper.program && (

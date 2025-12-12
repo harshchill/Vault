@@ -119,10 +119,10 @@ export default function PaperViewPage() {
                 <span>Semester {paper.semester}</span>
               </div>
               
-              {paper.department && (
+              {(paper.specialization || paper.department) && (
                 <div className="flex items-center gap-2 text-slate-600">
                   <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-medium">
-                    {paper.department}
+                    {paper.specialization || paper.department}
                   </span>
                 </div>
               )}
