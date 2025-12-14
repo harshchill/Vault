@@ -1,12 +1,13 @@
-import { NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import connectDB from '@/db/connectDb';
-import Paper from '@/models/paper';
+import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import connectDB from "@/db/connectDb";
+import Paper from "@/models/paper";
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * POST /api/papers
  * Creates a new exam paper entry in the database
- * 
+ *
  * Request body:
  * {
  *   title: string (required),
@@ -17,7 +18,7 @@ import Paper from '@/models/paper';
  *   program: string (required),
  *   url: string (required) - URL to the PDF file
  * }
- * 
+ *
  * Returns:
  * - 201: Success with created paper data
  * - 400: Validation error
@@ -29,35 +30,62 @@ export async function POST(request) {
     await connectDB();
 
     // Get token to get user email
-    const token = await getToken({ 
+    const token = await getToken({
       req: request,
-      secret: process.env.NEXTAUTH_SECRET 
+      secret: process.env.NEXTAUTH_SECRET,
     });
-    
+
     if (!token || !token.email) {
       return NextResponse.json(
-        { error: 'Authentication required. Please sign in to upload papers.' },
+        { error: "Authentication required. Please sign in to upload papers." },
         { status: 401 }
       );
     }
 
     // Parse request body
     const body = await request.json();
-    const { title, subject, semester, year, specialization, department, program, url } = body;
+    const {
+      title,
+      subject,
+      semester,
+      year,
+      specialization,
+      department,
+      program,
+      url,
+      fileName,
+    } = body;
 
     // Validate required fields
-    const effectiveSpecialization = (specialization ?? department)?.toString().trim();
-    if (!title || !subject || !semester || !year || !effectiveSpecialization || !program || !url) {
+    const effectiveSpecialization = (specialization ?? department)
+      ?.toString()
+      .trim();
+    if (
+      !title ||
+      !subject ||
+      !semester ||
+      !year ||
+      !effectiveSpecialization ||
+      !program ||
+      !url ||
+      !fileName
+    ) {
       return NextResponse.json(
-        { error: 'Missing required fields: title, subject, semester, year, specialization, program, url' },
+        {
+          error:
+            "Missing required fields: title, subject, semester, year, specialization, program, url , FileName ",
+        },
         { status: 400 }
       );
     }
 
     // Basic specialization validation (non-empty string)
-    if (typeof effectiveSpecialization !== 'string' || effectiveSpecialization.length === 0) {
+    if (
+      typeof effectiveSpecialization !== "string" ||
+      effectiveSpecialization.length === 0
+    ) {
       return NextResponse.json(
-        { error: 'Specialization must be a non-empty string' },
+        { error: "Specialization must be a non-empty string" },
         { status: 400 }
       );
     }
@@ -66,7 +94,7 @@ export async function POST(request) {
     const semesterNum = Number(semester);
     if (isNaN(semesterNum) || semesterNum < 1 || semesterNum > 8) {
       return NextResponse.json(
-        { error: 'Semester must be a number between 1 and 8' },
+        { error: "Semester must be a number between 1 and 8" },
         { status: 400 }
       );
     }
@@ -75,7 +103,7 @@ export async function POST(request) {
     const yearNum = Number(year);
     if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
       return NextResponse.json(
-        { error: 'Year must be a valid number between 2000 and 2100' },
+        { error: "Year must be a valid number between 2000 and 2100" },
         { status: 400 }
       );
     }
@@ -90,14 +118,15 @@ export async function POST(request) {
       department: effectiveSpecialization,
       program: program.trim(),
       url: url.trim(),
+      fileName: fileName,
       uploadedBy: token.email, // Email of the user who uploaded
       adminApproved: false, // Default to false, admin needs to approve
     });
 
     return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Paper created successfully',
+      {
+        success: true,
+        message: "Paper created successfully",
         paper: {
           id: paper._id,
           title: paper.title,
@@ -112,24 +141,23 @@ export async function POST(request) {
           uploadedBy: paper.uploadedBy,
           adminApproved: paper.adminApproved,
           createdAt: paper.createdAt,
-        }
+        },
       },
       { status: 201 }
     );
-
   } catch (error) {
-    console.error('Error creating paper:', error);
-    
+    console.error("Error creating paper:", error);
+
     // Handle duplicate key errors or validation errors
-    if (error.name === 'ValidationError') {
+    if (error.name === "ValidationError") {
       return NextResponse.json(
-        { error: 'Validation error: ' + error.message },
+        { error: "Validation error: " + error.message },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Internal server error. Please try again later.' },
+      { error: "Internal server error. Please try again later." },
       { status: 500 }
     );
   }
@@ -138,7 +166,7 @@ export async function POST(request) {
 /**
  * GET /api/papers
  * Retrieves all exam papers from the database
- * 
+ *
  * Query parameters (optional):
  * - semester: number - Filter by semester (1-8)
  * - year: number - Filter by year
@@ -146,7 +174,7 @@ export async function POST(request) {
  * - specialization: string - Filter by specialization
  * - department: string - Deprecated; still supported for backward compatibility
  * - program: string - Filter by program
- * 
+ *
  * Returns:
  * - 200: Success with array of papers
  * - 500: Server error
@@ -157,17 +185,20 @@ export async function GET(request) {
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
-    const semester = searchParams.get('semester');
-    const year = searchParams.get('year');
-    const subject = searchParams.get('subject');
-    const specialization = searchParams.get('specialization');
-    const department = searchParams.get('department');
-    const program = searchParams.get('program');
-    const unapproved = searchParams.get('unapproved'); // For admin to get unapproved papers
+    const semester = searchParams.get("semester");
+    const year = searchParams.get("year");
+    const subject = searchParams.get("subject");
+    const specialization = searchParams.get("specialization");
+    const department = searchParams.get("department");
+    const program = searchParams.get("program");
+    const unapproved = searchParams.get("unapproved"); // For admin to get unapproved papers
 
     // Build filter object
     // If unapproved=true, show unapproved papers (for admin), otherwise show only approved
-    const filter = unapproved === 'true' ? { adminApproved: false } : { adminApproved: true };
+    const filter =
+      unapproved === "true"
+        ? { adminApproved: false }
+        : { adminApproved: true };
     if (semester) {
       const semesterNum = Number(semester);
       if (!isNaN(semesterNum)) filter.semester = semesterNum;
@@ -177,25 +208,27 @@ export async function GET(request) {
       if (!isNaN(yearNum)) filter.year = yearNum;
     }
     if (subject) {
-      filter.subject = { $regex: subject, $options: 'i' }; // Case-insensitive search
+      filter.subject = { $regex: subject, $options: "i" }; // Case-insensitive search
     }
     // Map `specialization` (or deprecated `department`) to DB field `department`
     const specValue = specialization ?? department;
     if (specValue) filter.department = specValue;
     if (program) {
-      filter.program = { $regex: program, $options: 'i' }; // Case-insensitive search
+      filter.program = { $regex: program, $options: "i" }; // Case-insensitive search
     }
 
     // Fetch papers from database (only approved ones)
     const papers = await Paper.find(filter)
       .sort({ createdAt: -1 }) // Most recent first
-      .select('title subject semester year department program url uploadedBy adminApproved createdAt');
+      .select(
+        "title subject semester year department program url uploadedBy adminApproved createdAt"
+      );
 
     return NextResponse.json(
-      { 
+      {
         success: true,
         count: papers.length,
-        papers: papers.map(paper => ({
+        papers: papers.map((paper) => ({
           id: paper._id,
           title: paper.title,
           subject: paper.subject,
@@ -208,15 +241,14 @@ export async function GET(request) {
           uploadedBy: paper.uploadedBy,
           adminApproved: paper.adminApproved,
           createdAt: paper.createdAt,
-        }))
+        })),
       },
       { status: 200 }
     );
-
   } catch (error) {
-    console.error('Error fetching papers:', error);
+    console.error("Error fetching papers:", error);
     return NextResponse.json(
-      { error: 'Internal server error. Please try again later.' },
+      { error: "Internal server error. Please try again later." },
       { status: 500 }
     );
   }
@@ -225,13 +257,13 @@ export async function GET(request) {
 /**
  * PATCH /api/papers
  * Updates a paper's approval status (admin only)
- * 
+ *
  * Request body:
  * {
  *   paperId: string (required) - ID of the paper to update
  *   adminApproved: boolean (required) - New approval status
  * }
- * 
+ *
  * Returns:
  * - 200: Success with updated paper data
  * - 400: Validation error
@@ -245,22 +277,22 @@ export async function PATCH(request) {
     await connectDB();
 
     // Get token to verify admin role
-    const token = await getToken({ 
+    const token = await getToken({
       req: request,
-      secret: process.env.NEXTAUTH_SECRET 
+      secret: process.env.NEXTAUTH_SECRET,
     });
-    
+
     if (!token || !token.email) {
       return NextResponse.json(
-        { error: 'Authentication required.' },
+        { error: "Authentication required." },
         { status: 401 }
       );
     }
 
     // Check if user is admin
-    if (token.role !== 'admin') {
+    if (token.role !== "admin") {
       return NextResponse.json(
-        { error: 'Admin privileges required.' },
+        { error: "Admin privileges required." },
         { status: 403 }
       );
     }
@@ -270,9 +302,11 @@ export async function PATCH(request) {
     const { paperId, adminApproved } = body;
 
     // Validate required fields
-    if (!paperId || typeof adminApproved !== 'boolean') {
+    if (!paperId || typeof adminApproved !== "boolean") {
       return NextResponse.json(
-        { error: 'Missing required fields: paperId and adminApproved (boolean)' },
+        {
+          error: "Missing required fields: paperId and adminApproved (boolean)",
+        },
         { status: 400 }
       );
     }
@@ -284,17 +318,47 @@ export async function PATCH(request) {
       { new: true } // Return updated document
     );
 
-    if (!paper) {
-      return NextResponse.json(
-        { error: 'Paper not found.' },
-        { status: 404 }
+    if (adminApproved === false) {
+      // 1. Fetch the document first using the Model (Capital 'P')
+      const existingPaper = await Paper.findById(paperId);
+
+      // Safety check: ensure the paper actually exists before trying to delete
+      if (!existingPaper) {
+        throw new Error("Paper not found in database");
+      }
+
+      const filename = existingPaper.fileName;
+
+      // 2. Initialize Supabase Admin Client
+      // ⚠️ CRITICAL: Use SERVICE_ROLE_KEY for deletion permissions
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABSE_SERVICE_ROLE_KEY
       );
+
+      // 3. Delete from Supabase Storage
+      const { data: deleteData, error: deleteError } =
+        await supabaseAdmin.storage.from("Vault").remove([filename]);
+
+      if (deleteError) {
+        console.error("Supabase Deletion Error:", deleteError.message);
+        // Optional: decided if you want to stop here or continue to delete from MongoDB
+      }
+
+      // 4. Delete from MongoDB
+      await Paper.findByIdAndDelete(paperId);
+    }
+
+    if (!paper) {
+      return NextResponse.json({ error: "Paper not found." }, { status: 404 });
     }
 
     return NextResponse.json(
-      { 
-        success: true, 
-        message: `Paper ${adminApproved ? 'approved' : 'rejected'} successfully`,
+      {
+        success: true,
+        message: `Paper ${
+          adminApproved ? "approved" : "rejected"
+        } successfully`,
         paper: {
           id: paper._id,
           title: paper.title,
@@ -308,26 +372,24 @@ export async function PATCH(request) {
           uploadedBy: paper.uploadedBy,
           adminApproved: paper.adminApproved,
           createdAt: paper.createdAt,
-        }
+        },
       },
       { status: 200 }
     );
-
   } catch (error) {
-    console.error('Error updating paper:', error);
-    
+    console.error("Error updating paper:", error);
+
     // Handle validation errors
-    if (error.name === 'ValidationError') {
+    if (error.name === "ValidationError") {
       return NextResponse.json(
-        { error: 'Validation error: ' + error.message },
+        { error: "Validation error: " + error.message },
         { status: 400 }
       );
     }
 
     return NextResponse.json(
-      { error: 'Internal server error. Please try again later.' },
+      { error: "Internal server error. Please try again later." },
       { status: 500 }
     );
   }
 }
-

@@ -267,6 +267,7 @@ export default function UploadPage() {
           specialization: specValue,
           program: formData.program.trim(),
           url: publicUrl,
+          fileName: filename
         }),
       });
 

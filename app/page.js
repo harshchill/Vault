@@ -36,11 +36,11 @@ export default function Home() {
   const isAuthenticated = status === "authenticated" && session;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Hero Section with Gradient Background */}
       <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50">
         <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-0" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-26 md:py-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Content */}
             <div className="space-y-3 animate-fade-in">
@@ -49,7 +49,7 @@ export default function Home() {
                   <FiZap className="text-emerald-600" size={16} />
                   Minimal exam archive
                 </span>
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-slate-900 tracking-tight">
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight text-slate-900 tracking-tight break-words">
                   All your past semester papers in one{" "}
                   <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                     clean space

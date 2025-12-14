@@ -26,6 +26,9 @@ const PaperSchema = new mongoose.Schema({
   // (e.g., a link to your public folder or a simple S3 link)
   url: { type: String, required: true },
 
+  //original file name
+  fileName : { type : String , required : true },
+
   // Track who uploaded the paper
   uploadedBy: { type: String, required: true }, // Email of the user who uploaded
 

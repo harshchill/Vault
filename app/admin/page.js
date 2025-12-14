@@ -22,8 +22,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
-import { FiUpload, FiCheckCircle, FiXCircle, FiFileText, FiClock, FiUser } from 'react-icons/fi';
+import { FiTrendingUp, FiCheckCircle, FiXCircle, FiFileText, FiClock, FiUser } from 'react-icons/fi';
 
 const UNIVERSITY_COURSES = {
   "B.Tech": [
@@ -134,24 +133,10 @@ export default function AdminDashboard() {
   const router = useRouter();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState('upload');
+  const [activeTab, setActiveTab] = useState('overview');
   
-  // Upload component state
-  const [loading, setLoading] = useState(false);
-  const [supabase, setSupabase] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    subject: '',
-    semester: '1',
-    year: new Date().getFullYear(),
-    specialization: '',
-    program: 'B.Tech',
-    customSpecialization: '',
-  });
-  const [specializationOptions, setSpecializationOptions] = useState([]);
-  const [file, setFile] = useState(null);
+  // General state
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
 
   // Approval component state
   const [pendingPapers, setPendingPapers] = useState([]);
@@ -159,6 +144,11 @@ export default function AdminDashboard() {
   const [approvalError, setApprovalError] = useState(null);
 
   const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // Overview stats
+  const [totalPapers, setTotalPapers] = useState(0);
+  const [recentPapers, setRecentPapers] = useState([]);
+  const [loadingStats, setLoadingStats] = useState(false);
 
   // Check authentication and admin role
   useEffect(() => {
@@ -180,23 +170,31 @@ export default function AdminDashboard() {
     setIsAuthorized(true);
   }, [session, status, router]);
 
-  // Initialize Supabase client
+  // Fetch overview stats when authorized
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const fetchStats = async () => {
+      try {
+        setLoadingStats(true);
+        const response = await fetch('/api/papers');
+        const data = await response.json();
+        if (response.ok && data?.papers) {
+          setTotalPapers(data.papers.length || 0);
+          setRecentPapers(data.papers.slice(0, 5));
+        }
+      } catch (e) {
+        // Non-blocking error
+      } finally {
+        setLoadingStats(false);
+      }
+    };
 
-    if (!supabaseUrl || !supabaseKey) {
-      setError('Supabase configuration missing. Please check environment variables.');
-      return;
+    if (isAuthorized) {
+      fetchStats();
+      // Also preload pending for overview badge
+      fetchPendingPapers();
     }
-
-    try {
-      const client = createClient(supabaseUrl, supabaseKey);
-      setSupabase(client);
-    } catch (err) {
-      setError('Failed to initialize Supabase client: ' + err.message);
-    }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthorized]);
 
   // Fetch pending papers when approval tab is active
   useEffect(() => {
@@ -247,6 +245,7 @@ export default function AdminDashboard() {
           adminApproved: approved,
         }),
       });
+      
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
@@ -261,165 +260,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Upload form handlers
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    if (error) setError(null);
-  };
-
-  useEffect(() => {
-    const options = UNIVERSITY_COURSES[formData.program] || [];
-    setSpecializationOptions([...options, 'Other']);
-    setFormData((prev) => ({ ...prev, specialization: '', customSpecialization: '' }));
-  }, [formData.program]);
-
-  const handleProgramChange = (e) => {
-    const value = e.target.value;
-    setFormData((prev) => ({ ...prev, program: value }));
-  };
-
-  const handleSpecializationChange = (e) => {
-    const value = e.target.value;
-    setFormData((prev) => ({ ...prev, specialization: value, customSpecialization: '' }));
-  };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) {
-      setFile(null);
-      return;
-    }
-
-    if (selectedFile.type !== 'application/pdf') {
-      setError('Please select a PDF file only.');
-      setFile(null);
-      return;
-    }
-
-    const maxSize = 10 * 1024 * 1024;
-    if (selectedFile.size > maxSize) {
-      setError('File size must be less than 10MB.');
-      setFile(null);
-      return;
-    }
-
-    setFile(selectedFile);
-    if (error) setError(null);
-  };
-
-  const parseSemester = (semesterStr) => {
-    const match = semesterStr.match(/\d+/);
-    if (match) {
-      const num = parseInt(match[0], 10);
-      return num >= 1 && num <= 8 ? num : 1;
-    }
-    return 1;
-  };
-
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
-
-    if (!file) {
-      setError('Please select a PDF file to upload.');
-      return;
-    }
-
-    if (!supabase) {
-      setError('Supabase client not initialized. Please refresh the page.');
-      return;
-    }
-
-    const specValue = formData.specialization === 'Other' ? formData.customSpecialization.trim() : formData.specialization;
-    if (!formData.title.trim() || !formData.subject.trim() || !specValue || !formData.program.trim()) {
-      setError('Please fill in all required fields including specialization and program.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const filename = `${Date.now()}-${file.name.replace(/\s/g, '_')}`;
-      const bucketName = 'Vault';
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(filename, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        throw new Error(`Supabase upload failed: ${uploadError.message}`);
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(filename);
-
-      if (!publicUrl) {
-        throw new Error('Failed to generate public URL for uploaded file.');
-      }
-
-      const semesterNum = parseSemester(formData.semester);
-      const yearNum = parseInt(formData.year, 10);
-
-      const response = await fetch('/api/papers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: formData.title.trim(),
-          subject: formData.subject.trim(),
-          semester: semesterNum,
-          year: yearNum,
-          specialization: specValue,
-          program: formData.program.trim(),
-          url: publicUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
-        throw new Error(errorData.error || `Failed to save paper to database. Status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-
-      setSuccess(`Paper "${formData.title}" uploaded successfully!`);
-
-      setFormData({ 
-        title: '', 
-        subject: '', 
-        semester: '1', 
-        year: new Date().getFullYear(),
-        specialization: '',
-        program: 'B.Tech',
-        customSpecialization: '',
-      });
-      setFile(null);
-      
-      const fileInput = document.querySelector('input[type="file"]');
-      if (fileInput) fileInput.value = '';
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      let errorMessage = 'Upload failed. Please try again.';
-      
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error instanceof TypeError && error.message.includes('fetch')) {
-        errorMessage = 'Network error. Please check your connection and try again.';
-      }
-      
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Note: Upload functionality has been removed from Admin. Use public Upload page instead.
 
   // Show loading state while checking authentication
   if (status === 'loading' || !isAuthorized) {
@@ -487,16 +328,16 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
           <div className="flex border-b border-gray-200">
             <button
-              onClick={() => setActiveTab('upload')}
+              onClick={() => setActiveTab('overview')}
               className={`flex-1 px-6 py-4 text-sm font-semibold transition-colors ${
-                activeTab === 'upload'
+                activeTab === 'overview'
                   ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
                   : 'text-gray-600 hover:text-emerald-600 hover:bg-gray-50'
               }`}
             >
               <div className="flex items-center justify-center gap-2">
-                <FiUpload size={18} />
-                <span>Upload Paper</span>
+                <FiTrendingUp size={18} />
+                <span>Overview</span>
               </div>
             </button>
             <button
@@ -521,202 +362,50 @@ export default function AdminDashboard() {
 
           {/* Tab Content */}
           <div className="p-6">
-            {/* Upload Tab */}
-            {activeTab === 'upload' && (
-              <div>
-                {error && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">{error}</p>
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5">
+                    <p className="text-sm text-emerald-700 font-medium">Total Papers</p>
+                    <p className="mt-2 text-3xl font-bold text-emerald-900">{loadingStats ? '—' : totalPapers}</p>
                   </div>
-                )}
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-5">
+                    <p className="text-sm text-amber-700 font-medium">Pending Approvals</p>
+                    <p className="mt-2 text-3xl font-bold text-amber-900">{loadingPapers ? '—' : pendingPapers.length}</p>
+                  </div>
+                  <div className="bg-sky-50 border border-sky-100 rounded-xl p-5">
+                    <p className="text-sm text-sky-700 font-medium">Admins Online</p>
+                    <p className="mt-2 text-3xl font-bold text-sky-900">1</p>
+                  </div>
+                </div>
 
-                {success && (
-                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800">{success}</p>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Recent Papers</h3>
+                    <span className="text-sm text-gray-500">Latest 5</span>
                   </div>
-                )}
-                
-                <form onSubmit={handleUpload} className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 text-center">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {file ? (
-                        <span className="text-emerald-600">{file.name}</span>
-                      ) : (
-                        "Click to select PDF Document"
-                      )}
-                    </label>
-                    <input 
-                      type="file" 
-                      accept=".pdf"
-                      onChange={handleFileChange}
-                      disabled={loading}
-                      className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-                    {file && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        Size: {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                      Paper Title <span className="text-red-500">*</span>
-                    </label>
-                    <input 
-                      name="title" 
-                      type="text"
-                      required
-                      value={formData.title} 
-                      onChange={handleChange}
-                      placeholder="e.g. Data Structures Mid-Term"
-                      disabled={loading}
-                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                        Subject Code <span className="text-red-500">*</span>
-                      </label>
-                      <input 
-                        name="subject"
-                        type="text"
-                        required 
-                        value={formData.subject} 
-                        onChange={handleChange}
-                        placeholder="e.g. CS101"
-                        disabled={loading}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                      />
+                  {loadingStats ? (
+                    <div className="flex items-center justify-center py-10 text-gray-500">Loading...</div>
+                  ) : recentPapers.length === 0 ? (
+                    <div className="text-gray-500 text-sm">No papers found.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {recentPapers.map((paper) => (
+                        <div key={paper.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 bg-white">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <FiFileText className="text-emerald-600 shrink-0" size={18} />
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{paper.title}</p>
+                              <p className="text-xs text-gray-500">Sem {paper.semester} • {paper.year}</p>
+                            </div>
+                          </div>
+                          <span className="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 shrink-0">{paper.program || '—'}</span>
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                        Year <span className="text-red-500">*</span>
-                      </label>
-                      <input 
-                        name="year" 
-                        type="number"
-                        required
-                        min="2000"
-                        max="2100"
-                        value={formData.year} 
-                        onChange={handleChange}
-                        disabled={loading}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                        Semester <span className="text-red-500">*</span>
-                      </label>
-                      <select 
-                        name="semester" 
-                        value={formData.semester} 
-                        onChange={handleChange}
-                        disabled={loading}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                          <option key={num} value={num.toString()}>
-                            Semester {num}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                        Program <span className="text-red-500">*</span>
-                      </label>
-                      <select 
-                        name="program" 
-                        value={formData.program} 
-                        onChange={handleProgramChange}
-                        disabled={loading}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {Object.keys(UNIVERSITY_COURSES).map((prog) => (
-                          <option key={prog} value={prog}>{prog}</option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                        Specialization <span className="text-red-500">*</span>
-                      </label>
-                      <select 
-                        name="specialization" 
-                        value={formData.specialization} 
-                        onChange={handleSpecializationChange}
-                        disabled={loading || specializationOptions.length === 0}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="" disabled>Select specialization</option>
-                        {specializationOptions.map((spec) => (
-                          <option key={spec} value={spec}>{spec}</option>
-                        ))}
-                      </select>
-                      {formData.specialization === 'Other' && (
-                        <input 
-                          type="text"
-                          name="customSpecialization"
-                          value={formData.customSpecialization}
-                          onChange={handleChange}
-                          placeholder="Enter specialization"
-                          className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  <button 
-                    type="submit" 
-                    disabled={loading || !supabase}
-                    className={`w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white transition-all transform hover:scale-[1.02] ${
-                      loading || !supabase
-                        ? 'bg-emerald-400 cursor-not-allowed' 
-                        : 'bg-emerald-600 hover:bg-emerald-700'
-                    }`}
-                  >
-                    {loading ? (
-                      <>
-                        <svg 
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          fill="none" 
-                          viewBox="0 0 24 24"
-                        >
-                          <circle 
-                            className="opacity-25" 
-                            cx="12" 
-                            cy="12" 
-                            r="10" 
-                            stroke="currentColor" 
-                            strokeWidth="4"
-                          />
-                          <path 
-                            className="opacity-75" 
-                            fill="currentColor" 
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        Uploading...
-                      </>
-                    ) : (
-                      'Upload Paper'
-                    )}
-                  </button>
-
-                  <p className="text-xs text-gray-500 text-center mt-4">
-                    * Required fields. Maximum file size: 10MB
-                  </p>
-                </form>
+                  )}
+                </div>
               </div>
             )}
 
