@@ -3,6 +3,8 @@ import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { User } from "@/models/user";
 import connectDB from "@/db/connectDb";
+import { transporter, mailOptions } from "@/lib/nodemailer";
+import { welcomeEmail } from "@/app/component/emailTemplates/welcomeEmail";
 
 export const authoptions = NextAuth({
   // Configure one or more authentication providers
@@ -14,12 +16,11 @@ export const authoptions = NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_ID,
       clientSecret: process.env.GOOGLE_SECRET,
-    })
-   
+    }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       // Add role to token on first sign in
       if (user) {
         try {
@@ -27,101 +28,145 @@ export const authoptions = NextAuth({
           const dbUser = await User.findOne({ email: user.email });
           const avatar = user.image || user.avatar_url || token.image;
           if (dbUser) {
-            token.role = dbUser.role || 'user';
+            token.role = dbUser.role || "user";
             token.name = dbUser.name || user.name;
             token.image = dbUser.image || avatar;
             // Derive firstName for convenience
-            token.firstName = (token.name || user.name || '')?.split(' ')[0] || (user.email?.split("@")[0]) || 'User';
+            token.firstName =
+              (token.name || user.name || "")?.split(" ")[0] ||
+              user.email?.split("@")[0] ||
+              "User";
           } else {
-            token.role = 'user';
+            token.role = "user";
             token.name = user.name;
             token.image = avatar;
-            token.firstName = (user.name || '')?.split(' ')[0] || (user.email?.split("@")[0]) || 'User';
+            token.firstName =
+              (user.name || "")?.split(" ")[0] ||
+              user.email?.split("@")[0] ||
+              "User";
           }
         } catch (error) {
-          console.error('Error in jwt callback:', error);
-          token.role = 'user';
-          token.firstName = (token.name || token.email?.split("@")[0] || 'User');
+          console.error("Error in jwt callback:", error);
+          token.role = "user";
+          token.firstName = token.name || token.email?.split("@")[0] || "User";
         }
-      }  else {
+      } else {
         // On subsequent requests, always fetch latest role from database
         // This ensures role changes in DB are reflected immediately
         try {
           await connectDB();
           const dbUser = await User.findOne({ email: token.email });
           if (dbUser) {
-            token.role = dbUser.role || 'user';
+            token.role = dbUser.role || "user";
             token.name = dbUser.name || token.name;
             token.image = dbUser.image || token.image;
-            token.firstName = (dbUser.name || token.name || '')?.split(' ')[0] || (token.email?.split("@")[0]) || 'User';
+            token.firstName =
+              (dbUser.name || token.name || "")?.split(" ")[0] ||
+              token.email?.split("@")[0] ||
+              "User";
           }
         } catch (error) {
-          console.error('Error fetching user role in jwt callback:', error);
+          console.error("Error fetching user role in jwt callback:", error);
           // Keep existing token values on error
         }
       }
       return token;
     },
-    async signIn({ user, account, profile, email, credentials }) {
+    async signIn({ user }) {
       try {
         await connectDB();
         const currentUser = await User.findOne({ email: user.email });
         const avatar = user.image || user.avatar_url;
-        
+
         if (!currentUser) {
+          try {
+            const welcomeHtml = welcomeEmail({
+              userName: user.name || user.email,
+              vaultUrl: process.env.NEXTAUTH_URL || '',
+            });
+
+            await transporter.sendMail({
+              ...mailOptions,
+              to: user.email,
+              subject: "Welcome to Vault! Your journey starts here.",
+              html: welcomeHtml,
+            });
+          } catch (mailErr) {
+            console.error("Failed to send welcome email:", mailErr);
+            // continue sign-in even if email fails
+          }
           // Use name from provider, fallback to email prefix if name not available
-          const userName = user.name || user.email?.split("@")[0] || 'User';
-          
+          const userName = user.name || user.email?.split("@")[0] || "User";
+
           await User.create({
             email: user.email,
             name: userName,
-            role: 'user', // Default role for new users
+            role: "user", // Default role for new users
             image: avatar || undefined,
           });
         } else {
           // Update name if it's missing or if provider has a better name
-          if (user.name && (!currentUser.name || currentUser.name === currentUser.email?.split("@")[0])) {
+          if (
+            user.name &&
+            (!currentUser.name ||
+              currentUser.name === currentUser.email?.split("@")[0])
+          ) {
             currentUser.name = user.name;
           }
           // Backfill image if missing
-          if (!currentUser.image && (avatar)) {
+          if (!currentUser.image && avatar) {
             currentUser.image = avatar;
           }
           await currentUser.save();
         }
         return true;
       } catch (error) {
-        console.error('Error in signIn callback:', error);
+        console.error("Error in signIn callback:", error);
         return false;
       }
     },
     async session({ session, token }) {
       // Get role from token (set in jwt callback)
       if (token) {
-        session.user.role = token.role || 'user';
-        session.user.name = token.name || session.user.name || session.user.email?.split("@")[0];
+        session.user.role = token.role || "user";
+        session.user.name =
+          token.name || session.user.name || session.user.email?.split("@")[0];
         session.user.image = token.image || session.user.image || null;
-        session.user.firstName = token.firstName || (session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
+        session.user.firstName =
+          token.firstName ||
+          (session.user.name || "")?.split(" ")[0] ||
+          session.user.email?.split("@")[0];
       } else {
         // Fallback: try to get from database
         try {
           await connectDB();
           const dbUser = await User.findOne({ email: session.user.email });
           if (dbUser) {
-            session.user.name = dbUser.name || session.user.name || session.user.email?.split("@")[0];
-            session.user.role = dbUser.role || 'user';
+            session.user.name =
+              dbUser.name ||
+              session.user.name ||
+              session.user.email?.split("@")[0];
+            session.user.role = dbUser.role || "user";
             session.user.image = dbUser.image || session.user.image || null;
-            session.user.firstName = (dbUser.name || session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
+            session.user.firstName =
+              (dbUser.name || session.user.name || "")?.split(" ")[0] ||
+              session.user.email?.split("@")[0];
           } else {
-            session.user.name = session.user.name || session.user.email?.split("@")[0];
-            session.user.role = 'user';
-            session.user.firstName = (session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
+            session.user.name =
+              session.user.name || session.user.email?.split("@")[0];
+            session.user.role = "user";
+            session.user.firstName =
+              (session.user.name || "")?.split(" ")[0] ||
+              session.user.email?.split("@")[0];
           }
         } catch (error) {
-          console.error('Error in session callback:', error);
-          session.user.name = session.user.name || session.user.email?.split("@")[0];
-          session.user.role = 'user';
-          session.user.firstName = (session.user.name || '')?.split(' ')[0] || (session.user.email?.split("@")[0]);
+          console.error("Error in session callback:", error);
+          session.user.name =
+            session.user.name || session.user.email?.split("@")[0];
+          session.user.role = "user";
+          session.user.firstName =
+            (session.user.name || "")?.split(" ")[0] ||
+            session.user.email?.split("@")[0];
         }
       }
       return session;
