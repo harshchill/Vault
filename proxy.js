@@ -5,7 +5,7 @@ import { getToken } from 'next-auth/jwt';
  * Middleware to protect admin routes
  * Checks if user is authenticated and has admin role
  */
-export async function middleware(request) {
+export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
   // Only protect /admin routes
@@ -33,7 +33,7 @@ export async function middleware(request) {
       // User is admin, allow access
       return NextResponse.next();
     } catch (error) {
-      console.error('Middleware error:', error);
+      console.error('Middleware (proxy) error:', error);
       // On error, redirect to auth page
       const url = new URL('/auth', request.url);
       url.searchParams.set('callbackUrl', pathname);
