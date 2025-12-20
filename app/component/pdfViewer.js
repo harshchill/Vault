@@ -5,11 +5,12 @@ import { Document, Page, pdfjs } from 'react-pdf';
 
 // 1. Configure the worker (Essential for Next.js)
 // This tells the library where to find the code that processes PDFs
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-
+if (typeof window !== "undefined") {
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+} 
 // Optional: specific styles for react-pdf to prevent layout shifts
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 export default function PdfViewer({ url }) {
   const [numPages, setNumPages] = useState(null);

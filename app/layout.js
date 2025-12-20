@@ -17,6 +17,16 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "StudyVault | Exam Paper Hub",
   description: "Minimal hub for students to browse past semester papers.",
+  manifest: "/manifest.json", 
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Vault",
+  },
+};
+
+export const viewport = {
+  themeColor: "#059669",
 };
 
 export default function RootLayout({ children }) {
