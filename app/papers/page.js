@@ -4,11 +4,12 @@
 /**
  * Papers Page Component
  * 
- * Displays a list of exam papers fetched from the database with semester filtering.
+ * Displays a list of exam papers fetched from the database with server-side filtering and pagination.
  * 
  * Features:
  * - Fetches papers from MongoDB via API
- * - Filters papers by semester (client-side)
+ * - Filters papers server-side using query params (semester, specialization, program)
+ * - Paginates results using limit and offset
  * - Displays paper metadata (title, subject, semester, year)
  * - Opens PDF files in new tab when "View paper" is clicked
  * 
@@ -19,7 +20,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { FiFolder, FiFilter, FiClock, FiBookOpen, FiExternalLink } from "react-icons/fi";
+import { FiFolder, FiFilter, FiBookOpen, FiExternalLink, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight } from "react-icons/fi";
 import LoginRequiredModal from "../component/LoginRequiredModal";
 
 // Semester options for the filter dropdown
@@ -46,63 +47,73 @@ export default function PapersPage() {
   const [selectedSemester, setSelectedSemester] = useState("All semesters");
   const [selectedDepartment, setSelectedDepartment] = useState("All departments");
   const [selectedProgram, setSelectedProgram] = useState("All programs");
+  // Pagination state
+  const [limit, setLimit] = useState(12);
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // Fetch papers from API on component mount
+  // Fetch papers from API whenever filters or pagination change
   useEffect(() => {
     const fetchPapers = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('/api/papers');
+        const params = new URLSearchParams();
+        // Apply filters
+        if (selectedSemester !== "All semesters") {
+          const semesterNum = parseInt(selectedSemester.replace('Semester ', ''), 10);
+          if (!isNaN(semesterNum)) params.set('semester', String(semesterNum));
+        }
+        if (selectedDepartment !== "All departments") {
+          params.set('specialization', selectedDepartment);
+        }
+        if (selectedProgram !== "All programs") {
+          params.set('program', selectedProgram);
+        }
+        // Pagination
+        params.set('limit', String(limit));
+        params.set('offset', String(offset));
+
+        const response = await fetch(`/api/papers?${params.toString()}`);
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch papers');
         }
 
-        if (data.success && data.papers) {
+        if (data.success && Array.isArray(data.papers)) {
           setPapers(data.papers);
+          setTotal(Number(data.total ?? 0));
+          setHasMore(Boolean(data.hasMore));
         } else {
           setPapers([]);
+          setTotal(0);
+          setHasMore(false);
         }
       } catch (err) {
         console.error('Error fetching papers:', err);
         setError(err.message || 'Failed to load papers. Please try again later.');
         setPapers([]);
+        setTotal(0);
+        setHasMore(false);
       } finally {
         setLoading(false);
       }
     };
 
     fetchPapers();
-  }, []);
+  }, [selectedSemester, selectedDepartment, selectedProgram, limit, offset]);
 
-  // Filter papers by selected filters
-  const filtered = useMemo(() => {
-    let result = papers;
+  // Reset pagination when filters change
+  useEffect(() => {
+    setOffset(0);
+  }, [selectedSemester, selectedDepartment, selectedProgram]);
 
-    // Filter by semester
-    if (selectedSemester !== "All semesters") {
-      const semesterNum = parseInt(selectedSemester.replace('Semester ', ''), 10);
-      result = result.filter((paper) => paper.semester === semesterNum);
-    }
-
-    // Filter by specialization (fallback to department)
-    if (selectedDepartment !== "All departments") {
-      result = result.filter((paper) => (paper.specialization || paper.department) === selectedDepartment);
-    }
-
-    // Filter by program
-    if (selectedProgram !== "All programs") {
-      result = result.filter((paper) => 
-        paper.program?.toLowerCase().includes(selectedProgram.toLowerCase())
-      );
-    }
-
-    return result;
-  }, [papers, selectedSemester, selectedDepartment, selectedProgram]);
+  // Server returns already-filtered page; keep memo for any lightweight transforms if needed
+  const current = useMemo(() => papers, [papers]);
 
   // Dynamic options for Program and Specialization filters
   const programOptions = useMemo(() => {
@@ -268,7 +279,7 @@ export default function PapersPage() {
       )}
 
       {/* Empty State */}
-      {!loading && !error && filtered.length === 0 && (
+      {!loading && !error && current.length === 0 && (
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-12 text-center">
           <FiBookOpen className="mx-auto text-slate-400 mb-4" size={48} />
           <p className="text-slate-600 text-lg font-medium mb-2">
@@ -290,10 +301,10 @@ export default function PapersPage() {
       )}
 
       {/* Papers Grid */}
-      {!loading && !error && filtered.length > 0 && (
+      {!loading && !error && current.length > 0 && (
         <>
           <div className="text-sm text-slate-600">
-            Showing {filtered.length} {filtered.length === 1 ? 'paper' : 'papers'}
+            Showing {Math.min(total, offset + 1)}–{Math.min(total, offset + current.length)} of {total} {total === 1 ? 'paper' : 'papers'}
             {(selectedSemester !== "All semesters" || selectedDepartment !== "All departments" || selectedProgram !== "All programs") && (
               <span className="ml-1">
                 {selectedSemester !== "All semesters" && ` • ${selectedSemester}`}
@@ -304,7 +315,7 @@ export default function PapersPage() {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((paper) => (
+            {current.map((paper) => (
               <div 
                 key={paper.id} 
                 className="card p-5 space-y-3 hover:border-emerald-200 transition"
@@ -355,6 +366,51 @@ export default function PapersPage() {
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-6">
+            <div className="text-xs text-slate-500">
+              Page {Math.floor(offset / limit) + 1} of {Math.max(1, Math.ceil(total / limit))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setOffset(0)}
+                disabled={offset === 0 || loading}
+                className="button px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="First page"
+                title="First page"
+              >
+                <FiChevronsLeft />
+              </button>
+              <button
+                onClick={() => setOffset(Math.max(0, offset - limit))}
+                disabled={offset === 0 || loading}
+                className="button px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Previous page"
+                title="Previous page"
+              >
+                <FiChevronLeft />
+              </button>
+              <button
+                onClick={() => hasMore && setOffset(offset + limit)}
+                disabled={!hasMore || loading}
+                className="button px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Next page"
+                title="Next page"
+              >
+                <FiChevronRight />
+              </button>
+              <button
+                onClick={() => setOffset(Math.max(0, (Math.ceil(total / limit) - 1) * limit))}
+                disabled={(!hasMore && offset + limit >= total) || loading || total === 0}
+                className="button px-2 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Last page"
+                title="Last page"
+              >
+                <FiChevronsRight />
+              </button>
+            </div>
           </div>
         </>
       )}

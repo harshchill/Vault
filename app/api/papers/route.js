@@ -165,18 +165,21 @@ export async function POST(request) {
 
 /**
  * GET /api/papers
- * Retrieves all exam papers from the database
+ * Retrieves exam papers with server-side filtering and pagination.
  *
  * Query parameters (optional):
  * - semester: number - Filter by semester (1-8)
  * - year: number - Filter by year
- * - subject: string - Filter by subject code
- * - specialization: string - Filter by specialization
+ * - subject: string - Filter by subject code (case-insensitive contains)
+ * - specialization: string - Filter by specialization (mapped to DB field `department`)
  * - department: string - Deprecated; still supported for backward compatibility
- * - program: string - Filter by program
+ * - program: string - Filter by program (case-insensitive contains)
+ * - unapproved: "true" | "false" - When true, returns unapproved items (admin use)
+ * - limit: number - Page size (default 12, max 50)
+ * - offset: number - Number of items to skip for pagination (default 0)
  *
  * Returns:
- * - 200: Success with array of papers
+ * - 200: { success, papers: [...], count, total, limit, offset, hasMore, nextOffset, prevOffset }
  * - 500: Server error
  */
 export async function GET(request) {
@@ -192,6 +195,8 @@ export async function GET(request) {
     const department = searchParams.get("department");
     const program = searchParams.get("program");
     const unapproved = searchParams.get("unapproved"); // For admin to get unapproved papers
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
 
     // Build filter object
     // If unapproved=true, show unapproved papers (for admin), otherwise show only approved
@@ -217,17 +222,39 @@ export async function GET(request) {
       filter.program = { $regex: program, $options: "i" }; // Case-insensitive search
     }
 
-    // Fetch papers from database (only approved ones)
+    // Pagination controls
+    let limit = Number(limitParam ?? 12);
+    let offset = Number(offsetParam ?? 0);
+    if (isNaN(limit) || limit <= 0) limit = 12;
+    if (limit > 50) limit = 50; // hard cap to protect the DB
+    if (isNaN(offset) || offset < 0) offset = 0;
+
+    // Total count for the current filter (before pagination)
+    const total = await Paper.countDocuments(filter);
+
+    // Fetch paginated papers from database (only approved ones unless unapproved=true)
     const papers = await Paper.find(filter)
       .sort({ createdAt: -1 }) // Most recent first
+      .skip(offset)
+      .limit(limit)
       .select(
         "title subject semester year department program url uploadedBy adminApproved createdAt"
       );
+
+    const hasMore = offset + papers.length < total;
+    const nextOffset = hasMore ? offset + papers.length : null;
+    const prevOffset = offset > 0 ? Math.max(0, offset - limit) : null;
 
     return NextResponse.json(
       {
         success: true,
         count: papers.length,
+        total,
+        limit,
+        offset,
+        hasMore,
+        nextOffset,
+        prevOffset,
         papers: papers.map((paper) => ({
           id: paper._id,
           title: paper.title,
