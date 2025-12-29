@@ -47,8 +47,8 @@ export default function PaperViewPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch all papers and find the one with matching ID
-        const response = await fetch('/api/papers');
+        // Fetch only the requested paper using server filter (id) with limit=1
+        const response = await fetch(`/api/papers?id=${encodeURIComponent(paperId)}&limit=1&offset=0`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -60,14 +60,8 @@ export default function PaperViewPage() {
           throw new Error(data.error || 'Failed to fetch paper');
         }
 
-        if (data.papers && Array.isArray(data.papers)) {
-          const foundPaper = data.papers.find((p) => p.id === paperId);
-          
-          if (foundPaper) {
-            setPaper(foundPaper);
-          } else {
-            setError('Paper not found. It may have been removed or the ID is invalid.');
-          }
+        if (Array.isArray(data.papers) && data.papers.length > 0) {
+          setPaper(data.papers[0]);
         } else {
           setError('Invalid response format from server.');
         }

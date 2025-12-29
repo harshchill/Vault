@@ -174,6 +174,7 @@ export async function POST(request) {
  * - specialization: string - Filter by specialization (mapped to DB field `department`)
  * - department: string - Deprecated; still supported for backward compatibility
  * - program: string - Filter by program (case-insensitive contains)
+ * - id: string - Filter by specific paper id
  * - unapproved: "true" | "false" - When true, returns unapproved items (admin use)
  * - limit: number - Page size (default 12, max 50)
  * - offset: number - Number of items to skip for pagination (default 0)
@@ -194,6 +195,7 @@ export async function GET(request) {
     const specialization = searchParams.get("specialization");
     const department = searchParams.get("department");
     const program = searchParams.get("program");
+    const id = searchParams.get("id");
     const unapproved = searchParams.get("unapproved"); // For admin to get unapproved papers
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
@@ -220,6 +222,12 @@ export async function GET(request) {
     if (specValue) filter.department = specValue;
     if (program) {
       filter.program = { $regex: program, $options: "i" }; // Case-insensitive search
+    }
+    // If a specific id is provided, filter by _id
+    if (id) {
+      try {
+        filter._id = id;
+      } catch {}
     }
 
     // Pagination controls

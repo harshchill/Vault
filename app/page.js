@@ -11,17 +11,16 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, recent: 0 });
 
-  // Fetch recent papers
+  // Fetch recent papers (use server pagination and total)
   useEffect(() => {
     const fetchRecentPapers = async () => {
       try {
-        const response = await fetch('/api/papers');
+        const response = await fetch('/api/papers?limit=3&offset=0');
         const data = await response.json();
         
-        if (data.success && data.papers) {
-          const papers = data.papers.slice(0, 3); // Get 3 most recent
-          setRecentPapers(papers);
-          setStats({ total: data.papers.length, recent: papers.length });
+        if (response.ok && data.success && Array.isArray(data.papers)) {
+          setRecentPapers(data.papers);
+          setStats({ total: Number(data.total ?? data.papers.length ?? 0), recent: data.papers.length });
         }
       } catch (err) {
         console.error('Error fetching papers:', err);
