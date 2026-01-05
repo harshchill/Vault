@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@react-email/components": "^1.0.3",
+    "@react-email/render": "^2.0.1",
     "@supabase/supabase-js": "^2.86.2",
     "@vercel/analytics": "^1.6.1",
     "mongoose": "^9.0.0",

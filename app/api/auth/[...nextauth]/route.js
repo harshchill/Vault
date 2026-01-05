@@ -4,7 +4,9 @@ import GoogleProvider from "next-auth/providers/google";
 import { User } from "@/models/user";
 import connectDB from "@/db/connectDb";
 import { transporter, mailOptions } from "@/lib/nodemailer";
-import { welcomeEmail } from "@/app/component/emailTemplates/welcomeEmail";
+import { render } from "@react-email/render";
+import WelcomeEmail from "@/app/component/emailTemplates/WelcomeEmail";
+import path from "path";
 
 export const authoptions = NextAuth({
   // Configure one or more authentication providers
@@ -80,16 +82,31 @@ export const authoptions = NextAuth({
 
         if (!currentUser) {
           try {
-            const welcomeHtml = welcomeEmail({
-              userName: user.name || user.email,
-              vaultUrl: process.env.NEXTAUTH_URL || '',
-            });
+            const baseUrl = process.env.NEXTAUTH_URL || '';
+            const emailHtml = await render(
+              <WelcomeEmail
+                userName={user.name || user.email}
+                appName="Vault"
+                iconCid="app-icon"
+                dashboardUrl={baseUrl}
+                websiteUrl={baseUrl}
+                githubUrl="https://github.com/harshchill/Vault"
+                installUrl={baseUrl ? `${baseUrl}?install=1` : ''}
+              />
+            );
 
             await transporter.sendMail({
               ...mailOptions,
               to: user.email,
               subject: "Welcome to Vault! Your journey starts here.",
-              html: welcomeHtml,
+              html: emailHtml,
+              attachments: [
+                {
+                  filename: "icon.png",
+                  path: path.join(process.cwd(), "public", "icon.png"),
+                  cid: "app-icon",
+                },
+              ],
             });
           } catch (mailErr) {
             console.error("Failed to send welcome email:", mailErr);
