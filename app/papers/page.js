@@ -326,7 +326,7 @@ export default function PapersPage() {
                       <FiFolder />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 truncate" title={paper.title}>
+                      <p className="font-semibold text-slate-900 truncate max-w-45 md:max-w-xs overflow-hidden" title={paper.title}>
                         {paper.title}
                       </p>
                       <p className="text-xs text-slate-500">

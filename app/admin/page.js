@@ -464,7 +464,7 @@ export default function AdminDashboard() {
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
                               <FiFileText className="text-emerald-600 shrink-0" size={20} />
-                              <h3 className="font-semibold text-gray-900">{paper.title}</h3>
+                              <h3 className="font-semibold text-gray-900 truncate max-w-45 md:max-w-xs">{paper.title}</h3>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600 mb-3">
                               <div className="flex items-center gap-1">

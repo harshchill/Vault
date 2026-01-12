@@ -138,7 +138,7 @@ export default function Home() {
                               <FiFolder size={18} />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
+                              <p className="font-semibold max-w-45 md:max-w-xs overflow-hidden text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
                                 {paper.title}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
