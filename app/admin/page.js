@@ -178,7 +178,7 @@ export default function AdminDashboard() {
         const response = await fetch('/api/papers');
         const data = await response.json();
         if (response.ok && data?.papers) {
-          setTotalPapers(data.papers.length || 0);
+          setTotalPapers(data.total || 0);
           setRecentPapers(data.papers.slice(0, 5));
         }
       } catch (e) {
