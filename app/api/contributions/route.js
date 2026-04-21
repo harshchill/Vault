@@ -7,30 +7,31 @@ export async function GET() {
   try {
     await connectDB();
 
-    // Aggregate approved papers by uploader email
+    // Aggregate approved papers by uploader id.
     const agg = await Paper.aggregate([
-      { $match: { adminApproved: true } },
-      { $group: { _id: '$uploadedBy', count: { $sum: 1 } } },
+      { $match: { status: 'approved', uploaderID: { $ne: null } } },
+      { $group: { _id: '$uploaderID', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 50 },
     ]);
 
-    // Fetch user info (name/image) for each uploader
-    const emails = agg.map(a => a._id).filter(Boolean);
+    const userIds = agg.map((a) => a._id).filter(Boolean);
 
-    const users = await User.find({ email: { $in: emails } })
-      .select('email name image')
+    const users = await User.find({ _id: { $in: userIds } })
+      .select('_id email name image')
       .lean();
 
-    const userMap = new Map(users.map(u => [u.email, u]));
+    const userMap = new Map(users.map((u) => [String(u._id), u]));
 
     const ranked = agg.map((a, idx) => {
-      const u = userMap.get(a._id);
-      const name = u?.name || a._id?.split('@')[0] || 'User';
+      const userId = String(a._id);
+      const u = userMap.get(userId);
+      const name = u?.name || 'User';
       const firstName = name.split(' ')[0];
       return {
         rank: idx + 1,
-        email: a._id,
+        id: userId,
+        email: u?.email || null,
         count: a.count,
         name,
         firstName,

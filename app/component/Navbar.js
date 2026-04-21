@@ -57,16 +57,16 @@ export default function Navbar() {
             </Link>
           )}
           
-          <Link href="/papers" className="hover:text-emerald-600 transition-colors">
+          <Link href="/user/papers" className="hover:text-emerald-600 transition-colors">
             Papers
           </Link>
 
-          <Link href="/contributions" className="hover:text-emerald-600 transition-colors">
+          <Link href="/user/contributions" className="hover:text-emerald-600 transition-colors">
             Contributions
           </Link>
 
           {status === "authenticated" && (
-            <Link href="/upload" className="hover:text-emerald-600 transition-colors">
+            <Link href="/user/upload" className="hover:text-emerald-600 transition-colors">
               Upload
             </Link>
           )}
@@ -126,7 +126,7 @@ export default function Navbar() {
             </div>
           ) : (
             <Link 
-              href="/auth" 
+              href="/user/auth" 
               className="hover:text-emerald-600 transition-colors"
             >
               Login / Signup
@@ -188,7 +188,7 @@ export default function Navbar() {
                   )}
                   
                   <Link
-                    href="/papers"
+                    href="/user/papers"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors"
                   >
@@ -196,7 +196,7 @@ export default function Navbar() {
                   </Link>
 
                   <Link
-                    href="/contributions"
+                    href="/user/contributions"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors"
                   >
@@ -205,7 +205,7 @@ export default function Navbar() {
 
                   {status === "authenticated" && (
                     <Link
-                      href="/upload"
+                      href="/user/upload"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors"
                     >
@@ -251,7 +251,7 @@ export default function Navbar() {
                 {/* Login Link (if not authenticated) */}
                 {status !== "authenticated" && (
                   <Link
-                    href="/auth"
+                    href="/user/auth"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="block px-4 py-3 text-sm font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors mt-2 text-center"
                   >

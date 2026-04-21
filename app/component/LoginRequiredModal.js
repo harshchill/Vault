@@ -53,7 +53,7 @@ export default function LoginRequiredModal({ isOpen, onClose }) {
    * Handles navigation to login page
    */
   const handleLogin = () => {
-    router.push('/auth');
+    router.push('/user/auth');
   };
 
   /**
@@ -102,7 +102,7 @@ export default function LoginRequiredModal({ isOpen, onClose }) {
           </p>
           
           <p className="text-sm text-slate-500">
-            Don't worry, it will just take a moment to log in!
+            Don&apos;t worry, it will just take a moment to log in!
           </p>
 
           {/* Action buttons */}

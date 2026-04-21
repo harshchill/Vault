@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 "use client";
 
 /**
@@ -21,7 +20,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { FiFolder, FiFilter, FiBookOpen, FiExternalLink, FiChevronLeft, FiChevronRight, FiChevronsLeft, FiChevronsRight } from "react-icons/fi";
-import LoginRequiredModal from "../component/LoginRequiredModal";
+import LoginRequiredModal from "../../component/LoginRequiredModal";
 
 // Semester options for the filter dropdown
 const semesters = [
@@ -45,7 +44,7 @@ export default function PapersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSemester, setSelectedSemester] = useState("All semesters");
-  const [selectedDepartment, setSelectedDepartment] = useState("All departments");
+  const [selectedSpecialization, setSelectedSpecialization] = useState("All specializations");
   const [selectedProgram, setSelectedProgram] = useState("All programs");
   // Pagination state
   const [limit, setLimit] = useState(12);
@@ -67,8 +66,8 @@ export default function PapersPage() {
           const semesterNum = parseInt(selectedSemester.replace('Semester ', ''), 10);
           if (!isNaN(semesterNum)) params.set('semester', String(semesterNum));
         }
-        if (selectedDepartment !== "All departments") {
-          params.set('specialization', selectedDepartment);
+        if (selectedSpecialization !== "All specializations") {
+          params.set('specialization', selectedSpecialization);
         }
         if (selectedProgram !== "All programs") {
           params.set('program', selectedProgram);
@@ -105,12 +104,12 @@ export default function PapersPage() {
     };
 
     fetchPapers();
-  }, [selectedSemester, selectedDepartment, selectedProgram, limit, offset]);
+  }, [selectedSemester, selectedSpecialization, selectedProgram, limit, offset]);
 
   // Reset pagination when filters change
   useEffect(() => {
     setOffset(0);
-  }, [selectedSemester, selectedDepartment, selectedProgram]);
+  }, [selectedSemester, selectedSpecialization, selectedProgram]);
 
   // Server returns already-filtered page; keep memo for any lightweight transforms if needed
   const current = useMemo(() => papers, [papers]);
@@ -127,18 +126,18 @@ export default function PapersPage() {
     const programFilter = selectedProgram !== "All programs" ? selectedProgram : null;
     papers.forEach((p) => {
       if (programFilter && !(p.program || "").toLowerCase().includes(programFilter.toLowerCase())) return;
-      const spec = p.specialization || p.department;
+      const spec = p.specialization;
       if (spec) set.add(spec);
     });
-    return ["All departments", ...Array.from(set)];
+    return ["All specializations", ...Array.from(set)];
   }, [papers, selectedProgram]);
 
   // Ensure current specialization selection stays valid when program changes
   useEffect(() => {
-    if (!specializationOptions.includes(selectedDepartment)) {
-      setSelectedDepartment("All departments");
+    if (!specializationOptions.includes(selectedSpecialization)) {
+      setSelectedSpecialization("All specializations");
     }
-  }, [specializationOptions]);
+  }, [specializationOptions, selectedSpecialization]);
 
   /**
    * Handles navigating to the paper view page
@@ -161,7 +160,7 @@ export default function PapersPage() {
     }
 
     // User is authenticated, proceed to view paper
-    router.push(`/papers/${paperId}`);
+    router.push(`/user/papers/${paperId}`);
   };
 
   return (
@@ -206,14 +205,14 @@ export default function PapersPage() {
           <div className="card p-4 flex items-center gap-3">
             <FiFilter className="text-emerald-600 shrink-0" size={20} />
             <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
+              value={selectedSpecialization}
+              onChange={(e) => setSelectedSpecialization(e.target.value)}
               disabled={loading}
               className="bg-transparent outline-none text-sm font-medium text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed w-full"
             >
               {specializationOptions.map((opt) => (
                 <option key={opt} value={opt}>
-                  {opt === 'All departments' ? 'All specializations' : opt}
+                  {opt}
                 </option>
               ))}
             </select>
@@ -284,16 +283,16 @@ export default function PapersPage() {
           <FiBookOpen className="mx-auto text-slate-400 mb-4" size={48} />
           <p className="text-slate-600 text-lg font-medium mb-2">
             No papers found
-            {(selectedSemester !== "All semesters" || selectedDepartment !== "All departments" || selectedProgram !== "All programs") && (
+            {(selectedSemester !== "All semesters" || selectedSpecialization !== "All specializations" || selectedProgram !== "All programs") && (
               <span className="ml-1">
                 {selectedSemester !== "All semesters" && ` for ${selectedSemester}`}
-                {selectedDepartment !== "All departments" && ` in ${selectedDepartment}`}
+                {selectedSpecialization !== "All specializations" && ` in ${selectedSpecialization}`}
                 {selectedProgram !== "All programs" && ` (${selectedProgram})`}
               </span>
             )}
           </p>
           <p className="text-slate-500 text-sm">
-            {(selectedSemester === "All semesters" && selectedDepartment === "All departments" && selectedProgram === "All programs")
+            {(selectedSemester === "All semesters" && selectedSpecialization === "All specializations" && selectedProgram === "All programs")
               ? "Papers will appear here once they are uploaded."
               : "Try adjusting your filters or check back later."}
           </p>
@@ -305,10 +304,10 @@ export default function PapersPage() {
         <>
           <div className="text-sm text-slate-600">
             Showing {Math.min(total, offset + 1)}–{Math.min(total, offset + current.length)} of {total} {total === 1 ? 'paper' : 'papers'}
-            {(selectedSemester !== "All semesters" || selectedDepartment !== "All departments" || selectedProgram !== "All programs") && (
+            {(selectedSemester !== "All semesters" || selectedSpecialization !== "All specializations" || selectedProgram !== "All programs") && (
               <span className="ml-1">
                 {selectedSemester !== "All semesters" && ` • ${selectedSemester}`}
-                {selectedDepartment !== "All departments" && ` • ${selectedDepartment}`}
+                {selectedSpecialization !== "All specializations" && ` • ${selectedSpecialization}`}
                 {selectedProgram !== "All programs" && ` • ${selectedProgram}`}
               </span>
             )}
@@ -326,21 +325,21 @@ export default function PapersPage() {
                       <FiFolder />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 truncate max-w-45 md:max-w-xs overflow-hidden" title={paper.title}>
-                        {paper.title}
+                      <p className="font-semibold text-slate-900 truncate max-w-45 md:max-w-xs overflow-hidden" title={paper.subject}>
+                        {paper.subject}
                       </p>
                       <p className="text-xs text-slate-500">
                         Semester {paper.semester}
                       </p>
-                      {paper.subject && (
+                      {paper.program && (
                         <p className="text-xs text-slate-400 mt-0.5">
-                          {paper.subject}
+                          {paper.program}
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1">
-                        {(paper.specialization || paper.department) && (
+                        {paper.specialization && (
                           <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                            {paper.specialization || paper.department}
+                            {paper.specialization}
                           </span>
                         )}
                         {paper.program && (
@@ -358,7 +357,7 @@ export default function PapersPage() {
 
                 <button 
                   onClick={() => handleViewPaper(paper.id)}
-                  disabled={!paper.url}
+                  disabled={!paper.storageURL}
                   className="button button-primary w-full mt-4 justify-center disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <span>View paper</span>

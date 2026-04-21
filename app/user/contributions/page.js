@@ -55,7 +55,7 @@ export default function ContributionsPage() {
         <h1 className="text-3xl font-semibold text-slate-900">Top Contributors</h1>
         <div className="flex items-center gap-3">
           <div className="text-sm text-slate-600 hidden sm:flex items-center gap-2"><FiUsers /> Community Rankings</div>
-          <Link href="/upload" className="button button-primary">Contribute</Link>
+          <Link href="/user/upload" className="button button-primary">Contribute</Link>
         </div>
       </div>
 
@@ -72,7 +72,7 @@ export default function ContributionsPage() {
           {/* Top 3 stacked */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {top3.map((c) => (
-              <div key={c.email} className={`card p-5 flex flex-col items-center text-center gap-3 ${c.rank === 1 ? 'ring-2 ring-amber-300' : ''}`}>
+              <div key={c.id || c.email || c.rank} className={`card p-5 flex flex-col items-center text-center gap-3 ${c.rank === 1 ? 'ring-2 ring-amber-300' : ''}`}>
                 {badge(c.rank)}
                 <div className="relative h-16 w-16">
                   {c.image ? (
@@ -95,7 +95,7 @@ export default function ContributionsPage() {
           <div className="card p-0 overflow-hidden">
             <ul className="divide-y divide-slate-100">
               {rest.map((c) => (
-                <li key={c.email} className="flex items-center justify-between p-4">
+                <li key={c.id || c.email || c.rank} className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
                     {badge(c.rank)}
                     <div className="relative h-10 w-10">
@@ -109,7 +109,7 @@ export default function ContributionsPage() {
                     </div>
                     <div>
                       <div className="font-medium text-slate-900">{c.firstName}</div>
-                      <div className="text-xs text-slate-500">{c.email}</div>
+                      <div className="text-xs text-slate-500">{c.email || 'Email unavailable'}</div>
                     </div>
                   </div>
                   <div className="text-sm text-slate-700"><span className="font-semibold">{c.count}</span> papers</div>

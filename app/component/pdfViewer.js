@@ -32,16 +32,10 @@ export default function PdfViewer({ url }) {
     setLoading(false);
   }
 
-  if (!url) {
-    return (
-      <div className="flex items-center justify-center p-8 text-red-600">
-        <p>No PDF URL provided</p>
-      </div>
-    );
-  }
-
   // Calculate responsive width based on viewport
   useEffect(() => {
+    if (!url) return;
+
     const calculateWidth = () => {
       if (typeof window !== 'undefined') {
         // Get viewport width minus padding (16px on mobile, 32px on desktop)
@@ -55,7 +49,15 @@ export default function PdfViewer({ url }) {
     calculateWidth();
     window.addEventListener('resize', calculateWidth);
     return () => window.removeEventListener('resize', calculateWidth);
-  }, []);
+  }, [url]);
+
+  if (!url) {
+    return (
+      <div className="flex items-center justify-center p-8 text-red-600">
+        <p>No PDF URL provided</p>
+      </div>
+    );
+  }
 
   return (
     <div 

@@ -8,15 +8,16 @@ import { FiUpload, FiFileText } from 'react-icons/fi';
 // Program → Specialization map
 const UNIVERSITY_COURSES = {
   "B.Tech": [
-    "CSE",
+    "Computer Science & Engineering (CSE)",
     "CSE (AI & Data Science)",
     "CSE (Cyber Security)",
-    "AI & Machine Learning (IBM)",
+    "AI & Machine Learning",
     "Mining Engineering",
     "Civil Engineering",
     "Mechanical Engineering",
     "Electrical Engineering",
     "Cement Technology",
+    "Ceramics & Cement Technology",
     "Agricultural Engineering",
     "Food Technology",
     "Biotechnology"
@@ -32,14 +33,14 @@ const UNIVERSITY_COURSES = {
     "Agricultural Engineering"
   ],
   "M.Tech": [
-    "Computer Science",
+    "Computer Science and Engineering",
     "Mining Engineering",
     "Mechanical Engineering",
     "Agricultural Engineering",
     "Biotechnology"
   ],
   "Polytechnic Diploma": [
-    "Computer Science",
+    "Computer Science And Engineering",
     "Mining Engineering",
     "Mine Surveying",
     "Civil Engineering",
@@ -47,13 +48,22 @@ const UNIVERSITY_COURSES = {
     "Mechanical Engineering",
     "Cement Technology",
     "Food Technology",
+    "Agricultural Engineering",
+    "Fashion Design"
+  ],
+  "Polytechnic Diploma (Lateral Entry)": [
+    "Civil Engineering",
+    "Electrical Engineering",
+    "Cement Technology",
     "Agricultural Engineering"
   ],
   "BCA": [
     "BCA (Hons)",
     "BCA (Hons) AI & Machine Learning"
   ],
-  "MCA": ["Master of Computer Applications"],
+  "MCA": [
+    "Master of Computer Applications"
+  ],
   "B.Sc.": [
     "Computer Science (CS)",
     "Information Technology (IT) Hons",
@@ -64,7 +74,7 @@ const UNIVERSITY_COURSES = {
     "Microbiology",
     "Geology",
     "Math (Hons)",
-    "Biology",
+    "Math in Biology",
     "Seed Technology"
   ],
   "M.Sc.": [
@@ -72,28 +82,42 @@ const UNIVERSITY_COURSES = {
     "Food Technology",
     "Biotechnology",
     "Microbiology",
-    "Environment",
+    "Environmental Science",
     "Chemistry",
     "Physics",
     "Mathematics",
     "Yoga Science",
     "Agriculture (Agronomy)",
     "Agriculture (Soil Science)",
-    "Agriculture (Genetics)"
+    "Agriculture (Genetics)",
+    "Agriculture (Plant Pathology)",
+    "Agriculture (Fruit Science)",
+    "Agriculture (Chemistry)"
   ],
   "Management": [
     "BBA (Hons)",
     "BBA (Tourism & Hotel Mgmt)",
     "MBA (General)",
-    "MBA (Logistics & Supply Chain)",
-    "MBA (Production & Operation)",
-    "MBA (Executive)"
+    "MBA (Logistics & Supply Chain Management)",
+    "MBA (Production & Operation Management)",
+    "MBA (Executive)",
+    "MBA (Retail Management)",
+    "MBA (Human Resource Management)",
+    "MBA (Information Technology & Systems Management)",
+    "MBA (Marketing)",
+    "MBA (Rural Management)",
+    "MBA (Banking & Insurance)",
+    "MBA (Finance)",
+    "MBA (Tourism And Hospitality Management)",
+    "MBA (Agri-Business Management)"
   ],
   "Commerce": [
     "B.Com (Computer Application)",
     "B.Com (Economics)",
     "B.Com (Financial Mgmt)",
     "B.Com (Hons)",
+    "B.Com (Corporate Accounting Practice - CAP)",
+    "B.Com (Corporate Secretarial Practice - CSP)",
     "M.Com"
   ],
   "Pharmacy": [
@@ -103,10 +127,57 @@ const UNIVERSITY_COURSES = {
     "M.Pharma (Pharmaceutical Chemistry)"
   ],
   "Agriculture": [
-      "B.Sc. (Hons) Agriculture",
-      "B.Tech Agricultural Engg",
-      "M.Sc. Agronomy",
-      "M.Sc. Soil Science"
+    "B.Sc. (Hons) Agriculture",
+    "B.Tech Agricultural Engg",
+    "M.Sc. Agronomy",
+    "M.Sc. Soil Science",
+    "M.Sc. Plant Pathology",
+    "M.Sc. Fruit Science",
+    "M.Sc. Agriculture Chemistry"
+  ],
+  "B.A. (Bachelor of Arts)": [
+    "Computer Applications",
+    "Economics",
+    "English Literature",
+    "Fashion Design",
+    "History",
+    "Political Science",
+    "Public Administration",
+    "Sociology"
+  ],
+  "M.A. (Master of Arts)": [
+    "Public Administration",
+    "Political Science",
+    "Economics",
+    "Yoga Science"
+  ],
+  "Law": [
+    "LLB",
+    "BBA LLB",
+    "BA LLB",
+    "B.Com LLB",
+    "LLM"
+  ],
+  "Education": [
+    "B.Ed",
+    "Ph.D in Education"
+  ],
+  "Paramedical": [
+    "Bachelor of Medical Laboratory Technology (BMLT)",
+    "Bachelor of Physiotherapy (B.P.T.)"
+  ],
+  "Design": [
+    "B.Des (Design)"
+  ],
+  "PG Diploma": [
+    "PGDCA",
+    "PG Diploma in Cyber Security and Digital Forensics"
+  ],
+  "Ph.D": [
+    "Mining Engineering",
+    "Mathematics",
+    "Management",
+    "Education"
   ]
 };
 
@@ -117,7 +188,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [supabase, setSupabase] = useState(null);
   const [formData, setFormData] = useState({
-    title: '',
+    institute: '',
     subject: '',
     semester: '1',
     year: new Date().getFullYear(),
@@ -134,7 +205,7 @@ export default function UploadPage() {
   useEffect(() => {
     if (status === 'loading') return;
     if (status !== 'authenticated' || !session) {
-      router.push('/auth?callbackUrl=/upload');
+      router.push('/user/auth?callbackUrl=/user/upload');
     }
   }, [status, session, router]);
 
@@ -162,7 +233,6 @@ export default function UploadPage() {
     setSpecializationOptions([...options, 'Other']);
     // Reset specialization when program changes
     setFormData((prev) => ({ ...prev, specialization: '', customSpecialization: '' }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.program]);
 
   const handleChange = (e) => {
@@ -230,8 +300,8 @@ export default function UploadPage() {
     }
 
     const specValue = formData.specialization === 'Other' ? formData.customSpecialization.trim() : formData.specialization;
-    if (!formData.title.trim() || !formData.subject.trim() || !specValue || !formData.program.trim()) {
-      setError('Please fill in all required fields including specialization and program.');
+    if (!formData.institute.trim() || !formData.subject.trim() || !specValue || !formData.program.trim()) {
+      setError('Please fill in all required fields including institute, subject, specialization, and program.');
       return;
     }
 
@@ -260,14 +330,14 @@ export default function UploadPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: formData.title.trim(),
+          institute: formData.institute.trim(),
           subject: formData.subject.trim(),
           semester: semesterNum,
           year: yearNum,
           specialization: specValue,
           program: formData.program.trim(),
-          url: publicUrl,
-          fileName: filename
+          storageURL: publicUrl,
+          storageFileName: filename
         }),
       });
 
@@ -276,9 +346,9 @@ export default function UploadPage() {
         throw new Error(errorData.error || `Failed to save paper. Status: ${response.status}`);
       }
 
-      setSuccess(`Paper "${formData.title}" uploaded! It will be visible after admin approval.`);
+      setSuccess(`Paper "${formData.subject}" uploaded! It will be visible after admin approval.`);
 
-      setFormData({ title: '', subject: '', semester: '1', year: new Date().getFullYear(), specialization: '', program: 'B.Tech', customSpecialization: '' });
+      setFormData({ institute: '', subject: '', semester: '1', year: new Date().getFullYear(), specialization: '', program: 'B.Tech', customSpecialization: '' });
       setFile(null);
       const fileInput = document.querySelector('input[type="file"]');
       if (fileInput) fileInput.value = '';
@@ -341,13 +411,29 @@ export default function UploadPage() {
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                Institute <span className="text-red-500">*</span>
+              </label>
+              <input
+                name="institute"
+                type="text"
+                required
+                value={formData.institute}
+                onChange={handleChange}
+                placeholder="e.g. Institute of Engineering"
+                disabled={loading}
+                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
                 Paper Title <span className="text-red-500">*</span>
               </label>
               <input
-                name="title"
+                name="subject"
                 type="text"
                 required
-                value={formData.title}
+                value={formData.subject}
                 onChange={handleChange}
                 placeholder="e.g. Data Structures Mid-Term"
                 disabled={loading}
@@ -356,21 +442,6 @@ export default function UploadPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                  Subject Code <span className="text-red-500">*</span>
-                </label>
-                <input
-                  name="subject"
-                  type="text"
-                  required
-                  value={formData.subject}
-                  onChange={handleChange}
-                  placeholder="e.g. CS101"
-                  disabled={loading}
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
                   Year <span className="text-red-500">*</span>

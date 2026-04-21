@@ -24,110 +24,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { FiTrendingUp, FiCheckCircle, FiXCircle, FiFileText, FiClock, FiUser } from 'react-icons/fi';
 
-const UNIVERSITY_COURSES = {
-  "B.Tech": [
-    "CSE",
-    "CSE (AI & Data Science)",
-    "CSE (Cyber Security)",
-    "AI & Machine Learning (IBM)",
-    "Mining Engineering",
-    "Civil Engineering",
-    "Mechanical Engineering",
-    "Electrical Engineering",
-    "Cement Technology",
-    "Agricultural Engineering",
-    "Food Technology",
-    "Biotechnology"
-  ],
-  "B.Tech (Lateral Entry)": [
-    "CSE",
-    "Civil Engineering",
-    "Electrical Engineering",
-    "Mechanical Engineering",
-    "Mining Engineering",
-    "Cement Technology",
-    "Food Technology",
-    "Agricultural Engineering"
-  ],
-  "M.Tech": [
-    "Computer Science",
-    "Mining Engineering",
-    "Mechanical Engineering",
-    "Agricultural Engineering",
-    "Biotechnology"
-  ],
-  "Polytechnic Diploma": [
-    "Computer Science",
-    "Mining Engineering",
-    "Mine Surveying",
-    "Civil Engineering",
-    "Electrical Engineering",
-    "Mechanical Engineering",
-    "Cement Technology",
-    "Food Technology",
-    "Agricultural Engineering"
-  ],
-  "BCA": [
-    "BCA (Hons)",
-    "BCA (Hons) AI & Machine Learning"
-  ],
-  "MCA": ["Master of Computer Applications"],
-  "B.Sc.": [
-    "Computer Science (CS)",
-    "Information Technology (IT) Hons",
-    "Agriculture (Hons)",
-    "Horticulture (Hons)",
-    "Food Technology",
-    "Biotechnology (Hons)",
-    "Microbiology",
-    "Geology",
-    "Math (Hons)",
-    "Biology",
-    "Seed Technology"
-  ],
-  "M.Sc.": [
-    "Computer Science",
-    "Food Technology",
-    "Biotechnology",
-    "Microbiology",
-    "Environment",
-    "Chemistry",
-    "Physics",
-    "Mathematics",
-    "Yoga Science",
-    "Agriculture (Agronomy)",
-    "Agriculture (Soil Science)",
-    "Agriculture (Genetics)"
-  ],
-  "Management": [
-    "BBA (Hons)",
-    "BBA (Tourism & Hotel Mgmt)",
-    "MBA (General)",
-    "MBA (Logistics & Supply Chain)",
-    "MBA (Production & Operation)",
-    "MBA (Executive)"
-  ],
-  "Commerce": [
-    "B.Com (Computer Application)",
-    "B.Com (Economics)",
-    "B.Com (Financial Mgmt)",
-    "B.Com (Hons)",
-    "M.Com"
-  ],
-  "Pharmacy": [
-    "D.Pharma",
-    "B.Pharma",
-    "M.Pharma (Pharmaceutics)",
-    "M.Pharma (Pharmaceutical Chemistry)"
-  ],
-  "Agriculture": [
-      "B.Sc. (Hons) Agriculture",
-      "B.Tech Agricultural Engg",
-      "M.Sc. Agronomy",
-      "M.Sc. Soil Science"
-  ]
-};
-
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -155,7 +51,7 @@ export default function AdminDashboard() {
     if (status === 'loading') return;
     
     if (status === 'unauthenticated' || !session) {
-      router.push('/auth?callbackUrl=/admin');
+      router.push('/user/auth?callbackUrl=/admin');
       return;
     }
     
@@ -193,7 +89,6 @@ export default function AdminDashboard() {
       // Also preload pending for overview badge
       fetchPendingPapers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthorized]);
 
   // Fetch pending papers when approval tab is active
@@ -209,7 +104,7 @@ export default function AdminDashboard() {
       setLoadingPapers(true);
       setApprovalError(null);
 
-      const response = await fetch('/api/papers?unapproved=true');
+      const response = await fetch('/api/papers?status=pending');
       const data = await response.json();
 
       if (!response.ok) {
@@ -242,7 +137,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           paperId: paperId,
-          adminApproved: approved,
+          status: approved ? 'approved' : 'rejected',
         }),
       });
       
@@ -481,22 +376,22 @@ export default function AdminDashboard() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <span className="font-medium">Specialization:</span>
-                                <span>{paper.specialization || paper.department}</span>
+                                <span>{paper.specialization}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-4 text-xs text-gray-500">
                               <div className="flex items-center gap-1">
                                 <FiUser size={14} />
-                                <span>{paper.uploadedBy}</span>
+                                <span>{paper.uploaderName || paper.uploaderEmail || 'Unknown uploader'}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <FiClock size={14} />
-                                <span>{new Date(paper.createdAt).toLocaleDateString()}</span>
+                                <span>{new Date(paper.uploadedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
-                            {paper.url && (
+                            {paper.storageURL && (
                               <a
-                                href={paper.url}
+                                href={paper.storageURL}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 mt-3 text-sm text-emerald-600 hover:text-emerald-700 font-medium"

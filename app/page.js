@@ -63,24 +63,24 @@ export default function Home() {
               {/* CTA Buttons */}
               <div className="flex flex-wrap gap-4">
                 <Link 
-                  href="/papers" 
+                  href="/user/papers" 
                   className="button button-primary group"
                 >
                   Explore papers
                   <FiArrowRight className="group-hover:translate-x-1 transition-transform" size={18} />
                 </Link>
-                <Link href="/upload" className="button button-ghost">
+                <Link href="/user/upload" className="button button-ghost">
                   Contribute
                 </Link>
-                <Link href="/contributions" className="button button-ghost">
+                <Link href="/user/contributions" className="button button-ghost">
                   Leaderboard
                 </Link>
                 {!isAuthenticated ? (
-                  <Link href="/auth" className="button button-ghost">
+                  <Link href="/user/auth" className="button button-ghost">
                     Login / Signup
                   </Link>
                 ) : (
-                  <Link href="/papers" className="button button-ghost">
+                  <Link href="/user/papers" className="button button-ghost">
                     My Papers
                   </Link>
                 )}
@@ -129,7 +129,7 @@ export default function Home() {
                     {recentPapers.map((paper, idx) => (
                       <Link
                         key={paper.id}
-                        href={isAuthenticated ? `/papers/${paper.id}` : "/auth"}
+                        href={isAuthenticated ? `/user/papers/${paper.id}` : "/user/auth"}
                         className="block p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-300 hover:shadow-md transition-all group bg-gradient-to-r from-white to-emerald-50/30"
                       >
                         <div className="flex items-center justify-between">
@@ -139,14 +139,14 @@ export default function Home() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold max-w-45 md:max-w-xs overflow-hidden text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
-                                {paper.title}
+                                {paper.subject}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
                                 <p className="text-sm text-slate-500">Semester {paper.semester}</p>
-                                {paper.subject && (
+                                {paper.program && (
                                   <>
                                     <span className="text-slate-300">•</span>
-                                    <p className="text-sm text-slate-500 truncate">{paper.subject}</p>
+                                    <p className="text-sm text-slate-500 truncate">{paper.program}</p>
                                   </>
                                 )}
                               </div>
@@ -167,7 +167,7 @@ export default function Home() {
                 )}
                 
                 <Link
-                  href="/papers"
+                  href="/user/papers"
                   className="block w-full text-center py-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold transition-colors group"
                 >
                   View all papers
@@ -245,17 +245,17 @@ export default function Home() {
               Join thousands of students already using StudyVault.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/auth" className="px-8 py-4 bg-white text-emerald-600 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
+              <Link href="/user/auth" className="px-8 py-4 bg-white text-emerald-600 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
                 Join StudyVault
                 <FiArrowRight size={20} />
               </Link>
-              <Link href="/papers" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
+              <Link href="/user/papers" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
                 View collection
               </Link>
-              <Link href="/upload" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
+              <Link href="/user/upload" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
                 Contribute
               </Link>
-              <Link href="/contributions" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
+              <Link href="/user/contributions" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
                 Leaderboard
               </Link>
             </div>
@@ -276,12 +276,12 @@ export default function Home() {
               Pick up where you left off. Browse papers, filter by semester, and ace your exams.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/papers" className="button button-primary inline-flex items-center gap-2">
+              <Link href="/user/papers" className="button button-primary inline-flex items-center gap-2">
                 Browse Papers
                 <FiArrowRight size={20} />
               </Link>
-              <Link href="/upload" className="button button-ghost">Contribute</Link>
-              <Link href="/contributions" className="button button-ghost">Leaderboard</Link>
+              <Link href="/user/upload" className="button button-ghost">Contribute</Link>
+              <Link href="/user/contributions" className="button button-ghost">Leaderboard</Link>
             </div>
           </div>
         </section>

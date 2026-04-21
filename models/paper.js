@@ -1,41 +1,32 @@
 import mongoose from 'mongoose';
 
 const PaperSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  
-  // Just simple strings/numbers for filtering
-  subject: { type: String, required: true },
-  semester: { type: Number, required: true },
-  year: { type: Number, required: true },
-  
-  // Department field: CS, mining, cement, or others
-  department: { 
-    type: String, 
-    required: true,    
-    default: 'CS'
-  },
-  
-  // Program field: B.tech, BE, BSc, or anything
-  program: { 
-    type: String, 
+  uploaderID: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
-    default: 'B.tech'
   },
-
-  // For testing, just store the direct URL to the PDF/Image
-  // (e.g., a link to your public folder or a simple S3 link)
-  url: { type: String, required: true },
-
-  //original file name
-  fileName : { type : String , required : true },
-
-  // Track who uploaded the paper
-  uploadedBy: { type: String, required: true }, // Email of the user who uploaded
-
-  // Admin approval status
-  adminApproved: { type: Boolean, default: false }, // Whether the paper is approved by admin
-
-  createdAt: { type: Date, default: Date.now }
+  institute: { type: String, required: true, trim: true },
+  subject: { type: String, required: true, trim: true },
+  program: { type: String, required: true, trim: true },
+  specialization: { type: String, required: true, trim: true },
+  semester: { type: Number, required: true, min: 1 },
+  year: { type: Number, required: true, min: 2000 },
+  status: {
+    type: String,
+    enum: ['approved', 'pending', 'rejected'],
+    default: 'pending',
+  },
+  isExtracted: { type: Boolean, default: false },
+  storageFileName: { type: String, required: true, trim: true },
+  storageURL: { type: String, required: true, trim: true },
+  unlockCounts: { type: Number, default: 0, min: 0 },
+  saveCounts: { type: Number, default: 0, min: 0 },
+  uploadedAt: { type: Date, default: Date.now },
 });
+
+PaperSchema.index({ status: 1, uploadedAt: -1 });
+PaperSchema.index({ uploaderID: 1, status: 1 });
+PaperSchema.index({ specialization: 1, program: 1, semester: 1, year: 1, status: 1 });
 
 export default mongoose.models.Paper || mongoose.model('Paper', PaperSchema);

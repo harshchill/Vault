@@ -21,8 +21,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { FiArrowLeft, FiDownload, FiFileText, FiCalendar, FiBook } from 'react-icons/fi';
-import PdfViewer from '../../component/pdfViewer';
+import { FiArrowLeft, FiFileText, FiCalendar, FiBook } from 'react-icons/fi';
+import PdfViewer from '../../../component/pdfViewer';
 
 export default function PaperViewPage() {
   const params = useParams();
@@ -86,7 +86,7 @@ export default function PaperViewPage() {
           {/* Back button and title */}
           <div className="flex items-center gap-4 mb-4">
             <button
-              onClick={() => router.push('/papers')}
+              onClick={() => router.push('/user/papers')}
               className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
             >
               <FiArrowLeft size={20} />
@@ -99,7 +99,7 @@ export default function PaperViewPage() {
             <div className="flex flex-wrap items-center gap-4 text-sm">
               <div className="flex items-center gap-2 text-slate-700">
                 <FiFileText className="text-emerald-600" size={18} />
-                <span className="font-semibold text-lg">{paper.title}</span>
+                <span className="font-semibold text-lg">{paper.subject}</span>
               </div>
               
               {paper.subject && (
@@ -113,10 +113,10 @@ export default function PaperViewPage() {
                 <span>Semester {paper.semester}</span>
               </div>
               
-              {(paper.specialization || paper.department) && (
+              {paper.specialization && (
                 <div className="flex items-center gap-2 text-slate-600">
                   <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-medium">
-                    {paper.specialization || paper.department}
+                    {paper.specialization}
                   </span>
                 </div>
               )}
@@ -174,7 +174,7 @@ export default function PaperViewPage() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
             <p className="text-red-800 font-medium text-lg mb-2">{error}</p>
             <button
-              onClick={() => router.push('/papers')}
+              onClick={() => router.push('/user/papers')}
               className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               Go Back to Papers
@@ -183,14 +183,14 @@ export default function PaperViewPage() {
         )}
 
         {/* PDF Viewer */}
-        {paper && paper.url && !loading && (
+        {paper && paper.storageURL && !loading && (
           <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full">
-            <PdfViewer url={paper.url} />
+            <PdfViewer url={paper.storageURL} />
           </div>
         )}
 
         {/* No URL error */}
-        {paper && !paper.url && !loading && (
+        {paper && !paper.storageURL && !loading && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
             <p className="text-yellow-800 font-medium">
               This paper does not have a PDF URL available.
