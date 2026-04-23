@@ -142,6 +142,24 @@ export const authoptions = NextAuth({
         return false;
       }
     },
+    async redirect({ url, baseUrl }) {
+      // Send successful sign-ins to dashboard by default.
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/user/dashboard`;
+      }
+
+      // Keep explicit relative callback paths (e.g. signout redirects).
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+
+      // Allow same-origin callback URLs.
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+
+      return baseUrl;
+    },
     async session({ session, token }) {
       // Get role from token (set in jwt callback)
       if (token) {

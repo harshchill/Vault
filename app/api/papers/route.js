@@ -225,6 +225,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const semester = searchParams.get("semester");
     const year = searchParams.get("year");
+    const institute = searchParams.get("institute");
     const subject = searchParams.get("subject");
     const specialization = searchParams.get("specialization");
     const program = searchParams.get("program");
@@ -271,6 +272,13 @@ export async function GET(request) {
       const yearNum = Number(year);
       if (Number.isInteger(yearNum)) {
         filter.year = yearNum;
+      }
+    }
+
+    if (institute) {
+      const instituteText = normalizeString(institute);
+      if (instituteText) {
+        filter.institute = instituteText;
       }
     }
 

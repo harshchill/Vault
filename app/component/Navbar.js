@@ -38,8 +38,8 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-20 backdrop-blur bg-surface/80 border-b border-slate-200">
-      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+    <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/50 border-b border-teal-100/50 shadow-sm shadow-teal-500/5 transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link
           href="/"
           className="flex items-center gap-2 font-semibold text-lg"
@@ -108,6 +108,14 @@ export default function Navbar() {
                         </span>
                       )}
                     </div>
+
+                    {/* Feature Links */}
+                    <Link href="/user/dashboard" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors">
+                      Dashboard
+                    </Link>
+                    <Link href="/user/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors">
+                      Profile
+                    </Link>
 
                     {/* Sign Out Button */}
                     <button
@@ -230,6 +238,22 @@ export default function Navbar() {
                         </span>
                       )}
                     </div>
+
+                    {/* Feature Links */}
+                    <Link
+                      href="/user/dashboard"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors mt-2"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/user/profile"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors"
+                    >
+                      Profile
+                    </Link>
 
                     {/* Sign Out Button */}
                     <button

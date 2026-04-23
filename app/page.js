@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { FiBookOpen, FiSearch, FiZap, FiTrendingUp, FiArrowRight, FiFolder, FiClock } from "react-icons/fi";
+import { FiBookOpen, FiSearch, FiZap, FiArrowRight, FiFolder, FiLock } from "react-icons/fi";
+import dynamic from "next/dynamic";
+
+const Silk = dynamic(() => import("./component/Silk"), { ssr: false });
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -11,11 +14,10 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, recent: 0 });
 
-  // Fetch recent papers (use server pagination and total)
   useEffect(() => {
     const fetchRecentPapers = async () => {
       try {
-        const response = await fetch('/api/papers?limit=3&offset=0');
+        const response = await fetch('/api/papers?limit=4&offset=0');
         const data = await response.json();
         
         if (response.ok && data.success && Array.isArray(data.papers)) {
@@ -35,257 +37,204 @@ export default function Home() {
   const isAuthenticated = status === "authenticated" && session;
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
-      {/* Hero Section with Gradient Background */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-        <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-0" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left Content */}
-            <div className="space-y-3 animate-fade-in">
-              <div className="space-y-3">
-                <span className="pill inline-flex items-center gap-2">
-                  <FiZap className="text-emerald-600" size={16} />
-                  Minimal exam archive
+    <div className="min-h-screen bg-white text-slate-900 selection:bg-teal-100 selection:text-teal-900">
+      
+      {/* 
+        HERO SECTION
+      */}
+      <section className="relative pt-16 pb-20 md:pt-20 md:pb-32 overflow-hidden flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8">
+        <div className="absolute inset-0 z-0 bg-slate-900">
+          <Silk speed={3} scale={1} color="#00baa4" noiseIntensity={1.2} rotation={0} />
+        </div>
+        
+        <div className="max-w-4xl mx-auto space-y-8 relative z-10">
+          
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white flex flex-col items-center justify-center">
+            <span className="text-teal-400 mb-4 drop-shadow-sm">Vault</span>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-x-3 gap-y-1 flex-wrap text-center">
+              <span>Master your exams</span>
+              <span className="inline-grid h-[1.2em] overflow-hidden align-bottom text-white">
+                <span className="flex flex-col animate-[text-slide_6s_ease-in-out_infinite]">
+                  <span className="h-[1.2em] font-(family-name:--font-playfair) italic tracking-normal px-2 inline-flex items-center justify-center">faster.</span>
+                  <span className="h-[1.2em] font-(family-name:--font-playfair) italic tracking-normal px-2 inline-flex items-center justify-center">smarter.</span>
+                  <span className="h-[1.2em] font-(family-name:--font-playfair) italic tracking-normal px-2 inline-flex items-center justify-center">better.</span>
+                  <span className="h-[1.2em] font-(family-name:--font-playfair) italic tracking-normal px-2 inline-flex items-center justify-center">faster.</span>
                 </span>
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight text-slate-900 tracking-tight break-words">
-                  All your past semester papers in one{" "}
-                  <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    clean space
-                  </span>
-                </h1>
-                <p className="text-xl text-slate-600 leading-relaxed max-w-xl">
-                  StudyVault keeps previous exam papers organized with quick filters,
-                  so you spend time practicing, not searching.
-                </p>
-              </div>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-wrap gap-4">
-                <Link 
-                  href="/user/papers" 
-                  className="button button-primary group"
-                >
-                  Explore papers
-                  <FiArrowRight className="group-hover:translate-x-1 transition-transform" size={18} />
-                </Link>
-                <Link href="/user/upload" className="button button-ghost">
-                  Contribute
-                </Link>
-                <Link href="/user/contributions" className="button button-ghost">
-                  Leaderboard
-                </Link>
-                {!isAuthenticated ? (
-                  <Link href="/user/auth" className="button button-ghost">
-                    Login / Signup
-                  </Link>
-                ) : (
-                  <Link href="/user/papers" className="button button-ghost">
-                    My Papers
-                  </Link>
-                )}
-              </div>
-
-              {/* Stats */}
-              <div className="flex flex-wrap items-center gap-6 pt-4">
-                <div className="flex items-center gap-3 group">
-                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white grid place-items-center font-bold text-lg shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
-                    {stats.total > 0 ? `${Math.min(stats.total, 999)}${stats.total > 999 ? '+' : ''}` : '∞'}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-900">Verified papers</p>
-                    <p className="text-sm text-slate-500">Ready to study</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 group">
-                  <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white grid place-items-center font-bold text-lg shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
-                    <FiTrendingUp size={24} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-900">Growing library</p>
-                    <p className="text-sm text-slate-500">Updated regularly</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Content - Recent Papers Card */}
-            <div className="relative">
-              <div className="card p-8 space-y-6 shadow-2xl border-2 border-emerald-100/50 bg-white/80 backdrop-blur-sm">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-slate-500 font-medium mb-1">Quick peek</p>
-                    <h3 className="text-2xl font-bold text-slate-900">Recent papers</h3>
-                  </div>
-                  <span className="pill">Live data</span>
-                </div>
-                
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin h-6 w-6 border-2 border-emerald-600 border-t-transparent rounded-full" />
-                  </div>
-                ) : recentPapers.length > 0 ? (
-                  <div className="space-y-3">
-                    {recentPapers.map((paper, idx) => (
-                      <Link
-                        key={paper.id}
-                        href={isAuthenticated ? `/user/papers/${paper.id}` : "/user/auth"}
-                        className="block p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-300 hover:shadow-md transition-all group bg-gradient-to-r from-white to-emerald-50/30"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="h-10 w-10 rounded-lg bg-emerald-100 text-emerald-700 grid place-items-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-                              <FiFolder size={18} />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-semibold max-w-45 md:max-w-xs overflow-hidden text-slate-900 truncate group-hover:text-emerald-700 transition-colors">
-                                {paper.subject}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <p className="text-sm text-slate-500">Semester {paper.semester}</p>
-                                {paper.program && (
-                                  <>
-                                    <span className="text-slate-300">•</span>
-                                    <p className="text-sm text-slate-500 truncate">{paper.program}</p>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <span className="text-xs px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium shrink-0 ml-2">
-                            {paper.year}
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-slate-500">
-                    <FiBookOpen className="mx-auto mb-2 text-slate-400" size={32} />
-                    <p className="text-sm">No papers available yet</p>
-                  </div>
-                )}
-                
-                <Link
-                  href="/user/papers"
-                  className="block w-full text-center py-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold transition-colors group"
-                >
-                  View all papers
-                  <FiArrowRight className="inline-block ml-2 group-hover:translate-x-1 transition-transform" size={16} />
-                </Link>
-              </div>
-              
-              {/* Decorative elements */}
-              <div className="absolute -z-10 -top-4 -right-4 h-32 w-32 bg-emerald-200/30 rounded-full blur-3xl" />
-              <div className="absolute -z-10 -bottom-4 -left-4 h-24 w-24 bg-teal-200/30 rounded-full blur-3xl" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center mb-16">
-          <span className="pill mb-4 inline-block">Why StudyVault?</span>
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-            Everything you need to{" "}
-            <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              study smarter
-            </span>
-          </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            A focused platform designed to help you find and study past papers efficiently.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: <FiBookOpen className="text-emerald-600" size={28} />,
-              title: "Single hub",
-              desc: "Browse every paper without digging through folders or drives. Everything in one organized place.",
-              gradient: "from-emerald-50 to-teal-50",
-            },
-            {
-              icon: <FiSearch className="text-emerald-600" size={28} />,
-              title: "Smart filters",
-              desc: "Filter by semester, subject, or year to jump straight to what you need. No more endless scrolling.",
-              gradient: "from-teal-50 to-emerald-50",
-            },
-            {
-              icon: <FiZap className="text-emerald-600" size={28} />,
-              title: "Study friendly",
-              desc: "Minimal layout, light theme, and green accents that keep focus on content. Built for productivity.",
-              gradient: "from-emerald-50 to-teal-50",
-            },
-          ].map((item, idx) => (
-            <div
-              key={item.title}
-              className="card p-8 space-y-4 hover:shadow-xl transition-all duration-300 group border-2 border-transparent hover:border-emerald-200"
-            >
-              <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${item.gradient} grid place-items-center group-hover:scale-110 transition-transform shadow-lg`}>
-                {item.icon}
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900">{item.title}</h3>
-              <p className="text-slate-600 leading-relaxed">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA Section - Conditional based on auth */}
-      {!isAuthenticated ? (
-        <section className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 text-white py-20">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
-            <h2 className="text-4xl md:text-5xl font-bold leading-tight">
-              Ready to revise smarter?
-            </h2>
-            <p className="text-xl text-emerald-50 max-w-2xl mx-auto">
-              Create your account and start browsing a clean library of past papers.
-              Join thousands of students already using StudyVault.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/user/auth" className="px-8 py-4 bg-white text-emerald-600 rounded-xl font-bold hover:bg-emerald-50 transition-all shadow-xl hover:shadow-2xl hover:scale-105 inline-flex items-center gap-2">
-                Join StudyVault
-                <FiArrowRight size={20} />
-              </Link>
-              <Link href="/user/papers" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
-                View collection
-              </Link>
-              <Link href="/user/upload" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
-                Contribute
-              </Link>
-              <Link href="/user/contributions" className="px-8 py-4 bg-emerald-700/30 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-emerald-700/50 transition-all border-2 border-white/20">
-                Leaderboard
-              </Link>
-            </div>
-          </div>
-        </section>
-      ) : (
-        <section className="bg-gradient-to-br from-slate-50 to-emerald-50 py-20">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
-            <div className="inline-block">
-              <span className="pill bg-white border-2 border-emerald-200">
-                Welcome back, {session.user?.name || session.user?.email?.split("@")[0]}!
               </span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 leading-tight">
-              Continue your study journey
-            </h2>
-            <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-              Pick up where you left off. Browse papers, filter by semester, and ace your exams.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/user/papers" className="button button-primary inline-flex items-center gap-2">
-                Browse Papers
-                <FiArrowRight size={20} />
+          </h1>
+
+          <p className="text-xl md:text-2xl text-white/80 font-light max-w-2xl mx-auto leading-relaxed">
+            A minimalist archive of past papers, intelligently organized so you can focus on what actually matters.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+            {isAuthenticated ? (
+              <Link href="/user/papers" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white bg-slate-900 rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-slate-900/10 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
+                <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-linear-to-b from-transparent via-transparent to-black" />
+                <span className="relative flex items-center gap-2">
+                  My Library <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                </span>
               </Link>
-              <Link href="/user/upload" className="button button-ghost">Contribute</Link>
-              <Link href="/user/contributions" className="button button-ghost">Leaderboard</Link>
+            ) : (
+              <Link href="/user/auth" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white bg-teal-600 rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-teal-600/20 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2">
+                <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-linear-to-b from-transparent via-transparent to-black" />
+                <span className="relative flex items-center gap-2">
+                  Start studying <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                </span>
+              </Link>
+            )}
+            
+            <Link href="#features" className="px-8 py-3.5 text-base font-semibold text-slate-600 hover:text-slate-900 transition-colors">
+              How it works
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 
+        FEATURES SECTION (Minimal Bento Grid)
+      */}
+      <section id="features" className="py-24 bg-slate-50/50 border-y border-slate-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="mb-16 md:text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Everything you need. Nothing you don&apos;t.</h2>
+            <p className="mt-4 text-lg text-slate-500">We stripped away the clutter to give you a pure, undistracted study environment.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Bento Box 1: Large Feature */}
+            <div className="md:col-span-2 bg-white rounded-3xl p-8 border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                <FiBookOpen size={120} className="text-teal-600 rotate-12" />
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-teal-50 text-teal-600 grid place-items-center mb-6">
+                <FiBookOpen size={24} />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-3">The Single Hub</h3>
+              <p className="text-slate-500 text-lg leading-relaxed max-w-md">
+                Browse every past paper without digging through obscure shared drives or WhatsApp groups. We&apos;ve consolidated the entire archive into one pristine interface.
+              </p>
             </div>
+
+            {/* Bento Box 2: Small Feature */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 grid place-items-center mb-6">
+                <FiSearch size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Instant Search</h3>
+              <p className="text-slate-500 leading-relaxed">
+                Filter instantly by semester, subject, or year. Find what you need in milliseconds.
+              </p>
+            </div>
+
+            {/* Bento Box 3: Small Feature */}
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+              <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 grid place-items-center mb-6">
+                <FiZap size={24} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">Distraction Free</h3>
+              <p className="text-slate-500 leading-relaxed">
+                A clean, minimal typography-focused design. No ads, no popups, just you and your study material.
+              </p>
+            </div>
+
+            {/* Bento Box 4: Medium/Wide Feature with Stats */}
+            <div className="md:col-span-2 bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-md text-white flex flex-col justify-between">
+              <div>
+                <h3 className="text-2xl font-bold mb-2">Constantly Growing</h3>
+                <p className="text-slate-400 max-w-md">The community contributes daily. Verify your papers, earn platform coins, and top the leaderboard.</p>
+              </div>
+              <div className="mt-8 flex gap-8">
+                <div>
+                  <p className="text-4xl font-bold text-teal-400">
+                    {stats.total > 0 ? `${Math.min(stats.total, 999)}${stats.total > 999 ? '+' : ''}` : '∞'}
+                  </p>
+                  <p className="text-sm text-slate-500 font-medium uppercase tracking-wider mt-1">Verified Papers</p>
+                </div>
+                <div>
+                  <p className="text-4xl font-bold text-white">24/7</p>
+                  <p className="text-sm text-slate-500 font-medium uppercase tracking-wider mt-1">Availability</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 
+        RECENT ADDITIONS
+        A clean list design
+      */}
+      <section className="py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-10 border-b border-slate-100 pb-4">
+            <h2 className="text-2xl font-bold text-slate-900">Recently added</h2>
+            <Link href="/user/papers" className="text-sm font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1 transition-colors">
+              View all <FiArrowRight />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin h-6 w-6 border-2 border-slate-300 border-t-teal-600 rounded-full" />
+            </div>
+          ) : recentPapers.length > 0 ? (
+            <div className="space-y-4">
+              {recentPapers.map((paper) => (
+                <Link
+                  key={paper.id}
+                  href={isAuthenticated ? `/user/papers/${paper.id}` : "/user/auth"}
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-teal-100 group-hover:text-teal-600 transition-colors">
+                      <FiFolder size={18} />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900 group-hover:text-teal-700 transition-colors">{paper.subject}</h4>
+                      <p className="text-sm text-slate-500 mt-0.5">Sem {paper.semester} {paper.program && <span className="mx-1.5 text-slate-300">•</span>} {paper.program}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex items-center gap-3">
+                    <span className="px-3 py-1 rounded-md bg-slate-50 text-slate-600 text-sm font-medium border border-slate-100 group-hover:border-teal-100 transition-colors">
+                      {paper.year}
+                    </span>
+                    {!isAuthenticated && (
+                      <span className="text-slate-300 group-hover:text-teal-400 transition-colors">
+                        <FiLock size={16} />
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-3xl">
+              <FiBookOpen className="mx-auto mb-3 opacity-50" size={32} />
+              <p>No recent papers available.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 
+        MINIMAL CTA
+      */}
+      {!isAuthenticated && (
+        <section className="py-24 bg-slate-900 text-center px-4">
+          <div className="max-w-2xl mx-auto space-y-8">
+            <h2 className="text-4xl font-bold text-white tracking-tight">Ready to clear your backlog?</h2>
+            <p className="text-lg text-slate-400">Join thousands of students and start organizing your study material today. Free forever.</p>
+            <Link href="/user/auth" className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold text-slate-900 bg-white rounded-full hover:scale-105 transition-transform">
+              Create an account
+            </Link>
           </div>
         </section>
       )}
+      
     </div>
   );
 }

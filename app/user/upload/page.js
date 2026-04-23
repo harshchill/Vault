@@ -368,83 +368,97 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Paper</h1>
-          <p className="text-gray-600">Submit your paper for admin review and approval.</p>
+    <div className="min-h-screen bg-background relative overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+      <div className="absolute top-20 right-20 w-[400px] h-[400px] bg-teal-400/10 rounded-full blur-3xl -z-10" />
+
+      <div className="max-w-3xl mx-auto relative z-10 animate-fade-in">
+        <div className="mb-10 text-center">
+          <span className="pill mb-4 border border-teal-200 text-teal-700 font-black"><FiUpload /> Contribution Zone</span>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 tracking-tight mb-2">Drop a Paper</h1>
+          <p className="text-slate-500 text-lg">Leave a legacy. Submit past year papers for the community.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="glass-panel p-8 sm:p-10 shadow-2xl shadow-teal-500/10 border-t-4 border-t-teal-500 rounded-3xl relative overflow-hidden bg-white/80 backdrop-blur-3xl">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 font-medium rounded-xl flex items-center justify-between">
+              {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">{success}</p>
+            <div className="mb-6 p-4 bg-teal-50 border border-teal-200 text-teal-700 font-bold rounded-xl shadow-sm shadow-teal-500/10 flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600">✓</span>
+              {success}
             </div>
           )}
 
-          <form onSubmit={handleUpload} className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 text-center">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+          <form onSubmit={handleUpload} className="space-y-6">
+            <div className={`relative p-10 rounded-[24px] border-2 border-dashed flex flex-col items-center justify-center transition-all bg-white/50 group ${file ? 'border-teal-400 bg-teal-50/50 shadow-inner' : 'border-slate-300 hover:border-teal-300 hover:bg-slate-50'}`}>
+              <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-sm transition-transform group-hover:-translate-y-2 ${file ? 'bg-gradient-to-br from-teal-400 to-emerald-500 text-white shadow-teal-500/30' : 'bg-slate-100 text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-500'}`}>
+                 <FiFileText size={32} />
+              </div>
+              <label className="block text-center cursor-pointer w-full h-full absolute inset-0 z-10 flex flex-col items-center justify-center pt-32">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  disabled={loading}
+                  className="hidden"
+                />
+              </label>
+              <div className="text-center pointer-events-none relative z-0 mt-8">
                 {file ? (
-                  <span className="text-emerald-600">{file.name}</span>
+                  <>
+                    <span className="text-teal-700 font-extrabold text-lg block mb-2">{file.name}</span>
+                    <span className="text-teal-600 text-sm font-bold px-3 py-1 bg-teal-100/60 rounded-lg">
+                       {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </>
                 ) : (
-                  "Click to select PDF Document"
+                  <>
+                    <span className="text-slate-800 font-extrabold text-xl block mb-2">Click or drag PDF here</span>
+                    <span className="text-slate-400 font-medium">Strictly .pdf format, maximum 10MB</span>
+                  </>
                 )}
-              </label>
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                disabled={loading}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              {file && (
-                <p className="text-xs text-gray-500 mt-2">Size: {(file.size / 1024 / 1024).toFixed(2)} MB</p>
-              )}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                Institute <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="institute"
-                type="text"
-                required
-                value={formData.institute}
-                onChange={handleChange}
-                placeholder="e.g. Institute of Engineering"
-                disabled={loading}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+              <div className="space-y-2 md:col-span-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  Institute <span className="text-teal-500">*</span>
+                </label>
+                <input
+                  name="institute"
+                  type="text"
+                  required
+                  value={formData.institute}
+                  onChange={handleChange}
+                  placeholder="e.g. Stanford University"
+                  disabled={loading}
+                  className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                Paper Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                name="subject"
-                type="text"
-                required
-                value={formData.subject}
-                onChange={handleChange}
-                placeholder="e.g. Data Structures Mid-Term"
-                disabled={loading}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  Paper Title <span className="text-teal-500">*</span>
+                </label>
+                <input
+                  name="subject"
+                  type="text"
+                  required
+                  value={formData.subject}
+                  onChange={handleChange}
+                  placeholder="e.g. Advanced Data Structures Finals"
+                  disabled={loading}
+                  className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800"
+                />
+              </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                  Year <span className="text-red-500">*</span>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  Year <span className="text-teal-500">*</span>
                 </label>
                 <input
                   name="year"
@@ -455,103 +469,115 @@ export default function UploadPage() {
                   value={formData.year}
                   onChange={handleChange}
                   disabled={loading}
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                  Semester <span className="text-red-500">*</span>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  Semester <span className="text-teal-500">*</span>
                 </label>
-                <select
-                  name="semester"
-                  value={formData.semester}
-                  onChange={handleChange}
-                  disabled={loading}
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {[1,2,3,4,5,6,7,8].map(num => (
-                    <option key={num} value={num.toString()}>Semester {num}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    name="semester"
+                    value={formData.semester}
+                    onChange={handleChange}
+                    disabled={loading}
+                    className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800 appearance-none pr-10"
+                  >
+                    {[1,2,3,4,5,6,7,8,9,10].map(num => (
+                      <option key={num} value={num.toString()}>Semester {num}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                  Program <span className="text-red-500">*</span>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  Program <span className="text-teal-500">*</span>
                 </label>
-                <select
-                  name="program"
-                  value={formData.program}
-                  onChange={handleProgramChange}
-                  disabled={loading}
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {Object.keys(UNIVERSITY_COURSES).map((prog) => (
-                    <option key={prog} value={prog}>{prog}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    name="program"
+                    value={formData.program}
+                    onChange={handleProgramChange}
+                    disabled={loading}
+                    className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800 appearance-none pr-10"
+                  >
+                    {Object.keys(UNIVERSITY_COURSES).map((prog) => (
+                      <option key={prog} value={prog}>{prog}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"></path></svg>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
-                  Specialization <span className="text-red-500">*</span>
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  Specialization <span className="text-teal-500">*</span>
                 </label>
-                <select
-                  name="specialization"
-                  value={formData.specialization}
-                  onChange={handleSpecializationChange}
-                  disabled={loading || specializationOptions.length === 0}
-                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value="" disabled>Select specialization</option>
-                  {specializationOptions.map((spec) => (
-                    <option key={spec} value={spec}>{spec}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    name="specialization"
+                    value={formData.specialization}
+                    onChange={handleSpecializationChange}
+                    disabled={loading || specializationOptions.length === 0}
+                    className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800 appearance-none pr-10"
+                  >
+                    <option value="" disabled>Select specialization...</option>
+                    {specializationOptions.map((spec) => (
+                      <option key={spec} value={spec}>{spec}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"></path></svg>
+                  </div>
+                </div>
+
                 {formData.specialization === 'Other' && (
                   <input
                     type="text"
                     name="customSpecialization"
                     value={formData.customSpecialization}
                     onChange={handleChange}
-                    placeholder="Enter specialization"
-                    className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2.5 border bg-gray-50 focus:bg-white"
+                    placeholder="Type custom specialization"
+                    className="mt-3 w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800 animate-fade-in"
                   />
                 )}
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading || !supabase}
-              className={`w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white transition-all transform hover:scale-[1.02] ${
-                loading || !supabase ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'
-              }`}
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <FiUpload /> Upload Paper
-                </>
-              )}
-            </button>
-
-            <p className="text-xs text-gray-500 text-center mt-4">* Required fields. Maximum file size: 10MB</p>
+            <div className="pt-6 mt-4">
+              <button
+                type="submit"
+                disabled={loading || !supabase}
+                className="button button-primary w-full py-4 text-lg font-bold group disabled:opacity-50"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-3 justify-center">
+                    <svg className="animate-spin h-6 w-6 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Uploading & Encrypting...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-3 justify-center">
+                    <FiUpload size={22} className="group-hover:-translate-y-1 transition-transform" /> Transmit to Vault
+                  </span>
+                )}
+              </button>
+            </div>
+            
+            <p className="text-center text-xs font-semibold text-slate-400 mt-4 tracking-wide uppercase">
+              Submissions require admin approval before listing.
+            </p>
           </form>
-        </div>
-
-        <div className="mt-6 text-xs text-slate-500 flex items-center gap-2">
-          <FiFileText /> Submissions require admin approval before appearing in the Papers list.
         </div>
       </div>
     </div>

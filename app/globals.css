@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --surface: #ffffff;
-  --accent: #059669;
-  --muted: #475569;
-  --border: #e2e8f0;
+  --background: #fafcfa;
+  --foreground: #020617;
+  --surface: rgba(255, 255, 255, 0.75);
+  --accent: #00baa4;
+  --muted: #64748b;
+  --border: rgba(0, 186, 164, 0.2);
 }
 
 @theme inline {
@@ -25,82 +25,91 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
+  overflow-x: hidden;
 }
 
+/* Base Aesthetics */
 .bg-surface {
   background-color: var(--surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Glass & Neo Layouts */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px 0 rgba(0, 186, 164, 0.05);
+  border-radius: 24px;
 }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.07);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 186, 164, 0.15);
+  border-radius: 24px;
+  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 186, 164, 0.05);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -4px rgba(0, 186, 164, 0.1), 0 0 0 1px rgba(0, 186, 164, 0.2);
 }
 
+/* Pills */
 .pill {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.9rem;
+  padding: 0.5rem 1rem;
   border-radius: 999px;
-  background: rgba(5, 150, 105, 0.08);
-  color: #065f46;
-  font-weight: 600;
-  font-size: 0.9rem;
+  background: rgba(0, 186, 164, 0.1);
+  color: #009080;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
+/* Buttons */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.85rem 1.15rem;
-  border-radius: 12px;
+  padding: 0.85rem 1.6rem;
+  border-radius: 14px;
   font-weight: 600;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .button-primary {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, #00baa4 0%, #00a08e 100%);
   color: #fff;
-  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 186, 164, 0.25), inset 0 1px 1px rgba(255,255,255,0.2);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
-
 .button-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 34px rgba(16, 185, 129, 0.45);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 14px 30px rgba(0, 186, 164, 0.35), inset 0 1px 1px rgba(255,255,255,0.3);
 }
 
 .button-ghost {
-  background: rgba(5, 150, 105, 0.08);
-  color: #065f46;
+  background: transparent;
+  color: #009080;
+  border: 1px solid rgba(0, 186, 164, 0.2);
 }
-
 .button-ghost:hover {
-  background: rgba(5, 150, 105, 0.12);
+  background: rgba(0, 186, 164, 0.05);
+  border-color: rgba(0, 186, 164, 0.4);
 }
 
-/* Grid pattern background */
-.bg-grid-slate-100 {
-  background-image: 
-    linear-gradient(to right, rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* Fade in animation */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out;
+/* Landing Page Animations */
+@keyframes text-slide {
+  0%, 20% { transform: translateY(0); }
+  33%, 53% { transform: translateY(-25%); }
+  66%, 86% { transform: translateY(-50%); }
+  100% { transform: translateY(-75%); }
 }
