@@ -23,20 +23,73 @@ const playfair = Playfair_Display({
 });
 
 export const metadata = {
-  title: "StudyVault | Exam Paper Hub",
-  description: "StudyVault is the ultimate hub for students to access and share past semester exam papers. Browse, unlock, and download from the largest collection of university papers.",
-  keywords: "exam papers, past papers, university exams, study materials",
-  manifest: "/manifest.json", 
+  metadataBase: new URL("https://paper-vault.app"),
+  title: {
+    default: "Vault | Exam Paper Hub",
+    template: "%s | Vault",
+  },
+  description:
+    "Vault helps students discover, organize, and share past semester exam papers in one clean, fast academic library.",
+  keywords: [
+    "exam papers",
+    "past papers",
+    "university exams",
+    "study materials",
+    "question papers",
+    "semester papers",
+  ],
+  applicationName: "Vault",
+  category: "education",
+  manifest: "/manifest.json",
+  alternates: {
+    canonical: "/",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: [{ url: "/icon-192x192.png", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Vault",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     type: "website",
-    url: "https://studyvault.com",
-    title: "StudyVault | Exam Paper Hub",
-    description: "Access past semester exam papers from universities worldwide.",
+    url: "https://paper-vault.app",
+    siteName: "Vault",
+    title: "Vault | Exam Paper Hub",
+    description:
+      "Find previous year and semester papers faster with Vault's organized academic archive.",
+    locale: "en_US",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Vault - Exam Paper Hub",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vault | Exam Paper Hub",
+    description:
+      "Discover and manage past semester papers in Vault's clean, student-first archive.",
+    images: ["/twitter-image"],
   },
 };
 

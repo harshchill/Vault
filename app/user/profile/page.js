@@ -4,8 +4,35 @@ import { getUserProfile } from "@/app/actions/userActions";
 import ProfileForm from "./ProfileForm";
 
 export const metadata = {
-  title: "Profile | StudyVault",
-  description: "Manage your StudyVault profile. Update your university, program, specialization, and other personal information.",
+  title: "Profile",
+  description:
+    "Manage your Vault profile details to personalize your paper discovery experience.",
+  alternates: {
+    canonical: "/user/profile",
+  },
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+  openGraph: {
+    title: "Profile | Vault",
+    description:
+      "Update your academic profile preferences and details in Vault.",
+    url: "https://paper-vault.app/user/profile",
+    images: ["/opengraph-image"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Profile | Vault",
+    description: "Manage your personal profile inside Vault.",
+    images: ["/twitter-image"],
+  },
 };
 
 export default async function ProfilePage() {

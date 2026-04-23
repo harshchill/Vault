@@ -1,7 +1,7 @@
 {
-  "name": "Vault - Study",
+  "name": "Vault | Exam Paper Hub",
   "short_name": "Vault",
-  "description": "Previous Year Papers",
+  "description": "Discover and manage past semester exam papers in one focused study hub.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ECFDF5",

@@ -5,8 +5,35 @@ import { FiUpload, FiBookmark, FiFileText, FiAward, FiArrowRight } from "react-i
 import { getUserDashboardStats } from "@/app/actions/userActions";
 
 export const metadata = {
-  title: "Dashboard | StudyVault",
-  description: "Your personal StudyVault dashboard. View your uploads, saved papers, contributions, and profile information.",
+  title: "Dashboard",
+  description:
+    "Track your uploads, saved papers, and activity in your personal Vault dashboard.",
+  alternates: {
+    canonical: "/user/dashboard",
+  },
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+  openGraph: {
+    title: "Dashboard | Vault",
+    description:
+      "Your private Vault dashboard for papers, stats, and contributions.",
+    url: "https://paper-vault.app/user/dashboard",
+    images: ["/opengraph-image"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dashboard | Vault",
+    description: "Private overview of your activity in Vault.",
+    images: ["/twitter-image"],
+  },
 };
 
 export default async function DashboardPage() {
