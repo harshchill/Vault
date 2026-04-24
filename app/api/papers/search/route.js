@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/db/connectDb";
 import Paper from "@/models/paper";
+import {
+  checkRateLimit,
+  createRateLimitResponse,
+  getClientIp,
+} from "@/lib/rateLimit";
 
 const escapeRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -20,6 +25,18 @@ const escapeRegex = (value) =>
  */
 export async function GET(request) {
   try {
+    const searchLimit = await checkRateLimit({
+      policyName: "paperSearch",
+      identifier: getClientIp(request),
+    });
+
+    if (!searchLimit.success) {
+      return createRateLimitResponse(
+        searchLimit,
+        "Too many search requests. Please slow down and try again shortly."
+      );
+    }
+
     await connectDB();
 
     const { searchParams } = new URL(request.url);

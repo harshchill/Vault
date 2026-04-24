@@ -146,11 +146,16 @@ GOOGLE_SECRET=...
 # Supabase (public for client upload)
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+
+# Upstash Redis (rate limiting)
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
 ```
 
 Notes:
 - Create a Supabase Storage bucket named `Vault` and allow authenticated uploads.
 - Ensure CORS/public access as appropriate for PDF viewing.
+- For production, set Upstash variables in Vercel Project Settings -> Environment Variables.
 - If using `next/image` for provider avatars, ensure external domains are allowed in `next.config.mjs`:
   ```js
   export default {
@@ -159,6 +164,23 @@ Notes:
     },
   };
   ```
+
+## 🛡️ Rate Limiting
+
+This app uses Upstash Redis + Upstash Ratelimit for abuse protection in API routes.
+
+- `POST /api/papers`: `5 requests / 10 minutes` per signed-in user email
+- `PATCH /api/papers`: `30 requests / 10 minutes` per admin email
+- `GET /api/papers/search`: `20 requests / minute` per client IP
+
+When the limit is exceeded, the API returns `429` with:
+
+- `Retry-After`
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+
+Implementation lives in `lib/rateLimit.js` and is reused by route handlers.
 
 
 ## 🚀 Getting Started (Local)

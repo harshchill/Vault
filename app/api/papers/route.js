@@ -4,6 +4,10 @@ import { isValidObjectId } from "mongoose";
 import connectDB from "@/db/connectDb";
 import Paper from "@/models/paper";
 import { User } from "@/models/user";
+import {
+  checkRateLimit,
+  createRateLimitResponse,
+} from "@/lib/rateLimit";
 
 const VALID_STATUSES = new Set(["approved", "pending", "rejected"]);
 
@@ -70,8 +74,6 @@ const toPaperResponse = (paperInput) => {
  */
 export async function POST(request) {
   try {
-    await connectDB();
-
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
@@ -83,6 +85,20 @@ export async function POST(request) {
         { status: 401 }
       );
     }
+
+    const uploadLimit = await checkRateLimit({
+      policyName: "paperUpload",
+      identifier: token.email,
+    });
+
+    if (!uploadLimit.success) {
+      return createRateLimitResponse(
+        uploadLimit,
+        "Too many upload attempts. Please wait before uploading again."
+      );
+    }
+
+    await connectDB();
 
     const uploader = await User.findOne({ email: token.email })
       .select("_id name email")
@@ -375,8 +391,6 @@ export async function GET(request) {
  */
 export async function PATCH(request) {
   try {
-    await connectDB();
-
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
@@ -395,6 +409,20 @@ export async function PATCH(request) {
         { status: 403 }
       );
     }
+
+    const moderationLimit = await checkRateLimit({
+      policyName: "paperModeration",
+      identifier: token.email,
+    });
+
+    if (!moderationLimit.success) {
+      return createRateLimitResponse(
+        moderationLimit,
+        "Too many moderation requests. Please retry in a moment."
+      );
+    }
+
+    await connectDB();
 
     const body = await request.json();
     const { paperId, status } = body;
