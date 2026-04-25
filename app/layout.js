@@ -6,6 +6,31 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import Navbar from "./component/Navbar";
 import Footer from "./component/Footer";
 
+const baseUrl = "https://paper-vault.app";
+
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Vault",
+    url: baseUrl,
+    logo: `${baseUrl}/icon-192x192.png`,
+    sameAs: [baseUrl],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Vault",
+    url: baseUrl,
+    inLanguage: "en",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${baseUrl}/user/papers?subject={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  },
+];
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -23,7 +48,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://paper-vault.app"),
+  metadataBase: new URL(baseUrl),
   title: {
     default: "Vault | Exam Paper Hub",
     template: "%s | Vault",
@@ -43,8 +68,15 @@ export const metadata = {
     "AKS University exam papers",
   ],
   applicationName: "Vault",
+  creator: "Vault",
+  publisher: "Vault",
   category: "education",
   manifest: "/manifest.json",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   alternates: {
     canonical: "/",
   },
@@ -73,7 +105,7 @@ export const metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://paper-vault.app",
+    url: baseUrl,
     siteName: "Vault",
     title: "Vault | Exam Paper Hub",
     description:
@@ -109,6 +141,10 @@ export default function RootLayout({ children }) {
       >
         <div className="min-h-screen bg-surface text-slate-900">
           <SessionProvider>
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+            />
             <Navbar />
             <main>
               {children}

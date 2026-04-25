@@ -1,257 +1,359 @@
+# Vault
 
-# StudyVault — Minimal, beautiful exam-paper hub
+A student-first exam paper platform built with Next.js App Router.
+Vault helps users discover, filter, read, and contribute previous semester papers through a clean UI, role-based workflows, and a moderated publishing pipeline.
 
-A clean and efficient platform to organize, browse, and study previous semester papers. Focused UI. Smart filters. Secure access. Built with modern Next.js App Router and a tasteful emerald/teal aesthetic.
+## Project Snapshot
 
-Demo locally: http://localhost:3000
+Vault is designed around four product pillars:
 
+- Discovery: searchable and filterable paper library.
+- Study: focused PDF reading experience.
+- Contribution: authenticated uploads by students.
+- Moderation: admin approval system for quality control.
 
-## ✨ Highlights
+It is not just a file listing app; it combines authentication, moderation, storage, leaderboard aggregation, profile personalization, and PWA capabilities in one cohesive workflow.
 
-- **Minimal exam archive** with a modern, responsive UI (`app/page.js`).
-- **Smart filters** by semester, department, and program on `papers` page (`app/papers/page.js`).
-- **Secure viewing** of PDFs with a custom `PdfViewer` (`app/component/pdfViewer.js`) and a gentle login gate (`LoginRequiredModal`).
-- **Admin-only upload portal** to add new papers: uploads PDF to Supabase and metadata to MongoDB (`app/admin/page.js`).
-- **Role‑based access control** powered by NextAuth + JWT + database role lookup (`app/api/auth/[...nextauth]/route.js`, `middleware.js`).
-- **API routes** for creating and listing papers with validation (`app/api/papers/route.js`).
-- **User uploads** page for authenticated users (`/upload`) that submits papers for admin review.
-- **Contributions leaderboard** at `/contributions` aggregating approved uploads by user with avatars and ranks.
+## Core Stack
 
+- Framework: Next.js 16 (App Router)
+- UI: React 19 + Tailwind CSS v4
+- Auth: NextAuth (Google and GitHub providers)
+- Database: MongoDB (Mongoose)
+- File storage: Supabase Storage
+- Email: Nodemailer + React Email
+- Rate limiting: Upstash Redis + @upstash/ratelimit
+- PDF rendering: react-pdf + pdfjs-dist
+- PWA: @ducanh2912/next-pwa
+- Runtime analytics: Vercel Analytics + Speed Insights
 
-## 🧰 Tech Stack
+## User Flows
 
-- **Framework**: Next.js 16 (App Router)
-- **UI**: React 19, Tailwind CSS v4 with custom design tokens (`app/globals.css`)
-- **Auth**: NextAuth (Google, GitHub providers)
-- **Database**: MongoDB with Mongoose 9
-- **Storage**: Supabase Storage (bucket: `Vault`) for PDFs
-- **PDF Rendering**: react-pdf
+### 1) Visitor flow
 
-See `package.json` for versions.
+1. Land on homepage and view recent approved papers.
+2. Open library and browse by search + filters.
+3. Try to open a paper.
+4. Get login-required prompt.
 
+### 2) Authenticated student flow
 
-## 🏗️ App Architecture
+1. Sign in via Google/GitHub.
+2. Access dashboard and profile.
+3. Upload a PDF and metadata.
+4. Submission is created as `pending`.
+5. View approved papers and open PDF viewer.
 
-- **Layout & Providers**
-  - `app/layout.js` wraps pages with `SessionProvider` (`app/providers/SessionProvider.js`) and global `Navbar`.
-  - Global styles and tokens in `app/globals.css` (cards, pills, buttons, grid, animations).
+### 3) Admin flow
 
-- **Core Pages**
-  - `app/page.js`: Landing with hero, live recent papers, and CTAs.
-  - `app/papers/page.js`: Library with filters and guarded “View paper” action.
-  - `app/papers/[id]/page.js`: Auth-required PDF viewer page using `PdfViewer`.
-  - `app/auth/page.js`: Sign in (Google/GitHub) and email UI.
-  - `app/admin/page.js`: Admin upload workflow (Supabase + MongoDB) with validation.
-  - `app/upload/page.js`: User upload (auth required) — submissions await admin approval.
-  - `app/contributions/page.js`: Top contributors leaderboard (approved uploads only).
+1. Access `/admin` (role must be `admin`).
+2. Review pending submissions.
+3. Approve or reject each paper.
+4. Approved papers become visible in public/user library and leaderboard aggregation.
 
-- **API & Data**
-  - `app/api/papers/route.js`: REST-style POST (create) and GET (list with filters).
-  - `app/api/contributions/route.js`: Aggregation for the leaderboard.
-  - `models/paper.js`: Paper schema (title, subject, semester, year, department, program, url).
-  - `models/user.js`: User schema (email, name, role: user|admin, image?).
-  - `db/connectDb.js`: Mongoose connection (dbName: `Vault-project`).
+## Route Map
 
-- **Auth & Security**
-  - `app/api/auth/[...nextauth]/route.js`: NextAuth providers + JWT callbacks. Role is read from Mongo on each request to stay fresh.
-  - `middleware.js`: Protects `/admin` routes; only allows `role === 'admin'`.
+### Public / common routes
 
+- `/` - homepage with hero, features, and recent approved papers
+- `/user/auth` - OAuth sign-in page
+- `/user/papers` - paper discovery page (search + filters + pagination)
+- `/user/contributions` - contributor leaderboard
 
-## 🔐 Authentication & Roles
+### Auth-required routes
 
-- Providers: Google and GitHub.
-- On first sign-in, a `User` document is created with `role: 'user'`.
-- To grant admin access, update the user in MongoDB and set `role` to `admin`.
-- Middleware enforces admin access on `/admin` and redirects others to `/auth`.
-- Profile images: we store `image` on the user when available and also populate session with `image` and `firstName`. We fall back to provider `avatar_url` if `image` is missing.
+- `/user/dashboard` - personal stats and recent library activity
+- `/user/profile` - editable profile details
+- `/user/upload` - submit new paper PDF + metadata
+- `/user/papers/[id]` - individual paper reader page
 
+### Admin-only routes
 
-## 📦 Features You Built
+- `/admin` - moderation dashboard (overview + approve/reject pending papers)
 
-- **Beautiful landing** with live “Recent papers” fed from `/api/papers`.
-- **Filterable papers** view with semester/department/program filters (client-side, memoized) and clean cards with metadata.
-- **Login required modal** when trying to view without a session.
-- **Robust admin upload** flow:
-  - Validates PDF type/size and required form fields.
-  - Uploads file to Supabase bucket `Vault`.
-  - Creates a paper entry in MongoDB with strict validation and enums.
-- **PDF experience** tuned for study:
-  - Responsive scaling.
-  - Disabled context menu and interactions to reduce distractions.
-  - Smooth loading states and error messaging.
+## API Surface
 
+### Papers API: `/api/papers`
 
-## 🔗 Routes Overview
+#### `GET /api/papers`
 
-- `/` — Landing page, stats, recent papers preview.
-- `/auth` — Sign-in with Google/GitHub.
-- `/papers` — Full library view with filters and guarded viewing.
-- `/papers/[id]` — PDF viewer (requires login).
-- `/admin` — Admin upload portal (requires admin role).
-- `/upload` — User uploads (requires login, pending admin approval).
-- `/contributions` — Top contributors leaderboard.
+- Purpose: list papers with server-side filtering and pagination
+- Default status filter: `approved`
+- Supports query params:
+  - `semester`, `year`, `institute`, `subject`, `specialization`, `program`, `id`
+  - `status` (`approved|pending|rejected`)
+  - `limit` (default 12, max 50), `offset`
+- Protection:
+  - Non-approved statuses require admin token
+- Returns pagination metadata:
+  - `count`, `total`, `limit`, `offset`, `hasMore`, `nextOffset`, `prevOffset`
 
+#### `POST /api/papers`
 
-## 🧪 API Endpoints
+- Purpose: create paper submission
+- Requires authenticated user
+- Rate limit policy: `paperUpload` (5 requests / 10 minutes per email)
+- Required payload fields:
+  - `institute`, `subject`, `semester`, `year`, `specialization`, `program`, `storageURL`, `storageFileName`
+- Creates papers with defaults:
+  - `status: pending`, `isExtracted: false`, `unlockCounts: 0`, `saveCounts: 0`
 
-Primary papers endpoints under `app/api/papers/route.js`.
+#### `PATCH /api/papers`
 
-- **GET /api/papers** — List papers (sorted by `createdAt` desc)
-  - Query params: `semester`, `year`, `subject`, `department`, `program`
-  - Returns: `{ success, count, papers: [{ id, title, subject, semester, year, department, program, url, createdAt }] }`
+- Purpose: moderation update (`approved|pending|rejected`)
+- Requires admin role
+- Rate limit policy: `paperModeration` (30 requests / 10 minutes per admin email)
+- Required payload:
+  - `paperId`, `status`
 
-- **POST /api/papers** — Create paper
-  - Body: `{ title, subject, semester (1–8), year (2000–2100), department ('CS'|'mining'|'cement'|'others'), program, url }`
-  - Validation: required fields, enums, ranges.
-  - Returns: `{ success, message, paper }` with created entity.
+### Smart search API: `/api/papers/search`
 
-- **GET /api/contributions** — Leaderboard aggregation
-  - Returns: `{ success, contributors: [{ rank, email, count, firstName, image }] }`
+#### `GET /api/papers/search`
 
+- Purpose: lightweight relevance-ranked search
+- Rate limit policy: `paperSearch` (20 requests / 60 seconds per client IP)
+- Query params:
+  - `q` (min 2 chars), `limit` (default 20, max 50), optional `status` (default `approved`)
+- Search fields:
+  - `subject`, `program`, `specialization`
+- Ranking strategy:
+  - weighted relevance score via MongoDB aggregation
 
-## 🗃️ Data Models
+### Contributions API: `/api/contributions`
 
-- `models/paper.js`
-  - `title: String`
-  - `subject: String`
-  - `semester: Number (1–8)`
-  - `year: Number`
-  - `department: 'CS' | 'mining' | 'cement' | 'others'`
-  - `program: String` (e.g., B.tech)
-  - `url: String` (Supabase file URL)
-  - `createdAt: Date`
+#### `GET /api/contributions`
 
-- `models/user.js`
-  - `email: String (unique)`
-  - `name: String`
-  - `role: 'user' | 'admin'`
-  - `image?: String` (avatar URL from provider)
+- Purpose: leaderboard of contributors
+- Logic:
+  - aggregate approved papers by `uploaderID`
+  - rank descending by contribution count
+  - enrich with user identity fields (`name`, `email`, `image`)
 
+### Auth API: `/api/auth/[...nextauth]`
 
-## ⚙️ Environment Variables
+- NextAuth route handling login callbacks/session/JWT
+- Providers: Google and GitHub
+- New-user behavior:
+  - create user record with role `user`
+  - send welcome email
 
-Create `.env.local` with:
+## Data Model
+
+### `User`
+
+- `email` (required, unique)
+- `name` (required)
+- `role` (`user|admin`, default `user`)
+- `image`
+- `university`, `program`, `specialization`, `semester`
+- `createdAt`
+
+### `Paper`
+
+- `uploaderID` (ObjectId ref -> User)
+- `institute`, `subject`, `program`, `specialization`
+- `semester`, `year`
+- `status` (`approved|pending|rejected`, default `pending`)
+- `isExtracted` (default `false`)
+- `storageFileName`, `storageURL`
+- `unlockCounts`, `saveCounts`
+- `uploadedAt`
+
+Indexes include:
+
+- `{ status: 1, uploadedAt: -1 }`
+- `{ uploaderID: 1, status: 1 }`
+- `{ specialization: 1, program: 1, semester: 1, year: 1, status: 1 }`
+
+### `SavedPaper`
+
+- `userId` (ref User)
+- `paperId` (ref Paper)
+- `savedAt`
+- unique composite index `{ userId: 1, paperId: 1 }`
+
+### `UnlockedPaper`
+
+- `userId` (ref User)
+- `paperId` (ref Paper)
+- `unlockedAt`
+- unique composite index `{ userId: 1, paperId: 1 }`
+
+## Authentication and Authorization
+
+- OAuth providers: Google + GitHub
+- Session strategy: JWT via NextAuth
+- Role attached to token and session (`session.user.role`)
+- Middleware protection for `/admin` in `proxy.js`
+- API-level admin enforcement for moderation endpoints
+- UI-level role guards in admin and navbar
+
+## Upload and Moderation Pipeline
+
+1. User uploads PDF from `/user/upload`.
+2. Frontend validates file type and size (PDF, <= 10MB).
+3. File uploads to Supabase bucket `Vault`.
+4. Public URL is generated from Supabase.
+5. Metadata is posted to `POST /api/papers`.
+6. Record is stored with status `pending`.
+7. Admin reviews and updates status with `PATCH /api/papers`.
+
+## PDF Experience
+
+- PDF worker copied to `/public/pdf.worker.min.js` during build
+- `react-pdf` renders all pages in custom viewer
+- Responsive page-width calculation
+- Right-click and text/annotation layers are disabled in viewer UI
+
+## Search and Discovery
+
+Library page combines:
+
+- Server-side filtering by structured fields
+- Client-side control state for filters and pagination
+- Debounced smart search against `/api/papers/search`
+- Result cards with subject, semester, year, program, specialization, institute
+
+## PWA and Offline Behavior
+
+- PWA integration through `@ducanh2912/next-pwa`
+- Service worker emitted into `public/`
+- Runtime cache rule for Supabase PDF URLs:
+  - strategy: `CacheFirst`
+  - cache: `vault-papers-cache`
+  - max entries: 50
+  - max age: 30 days
+- Manifest configured at `public/manifest.json`
+
+## SEO and Metadata
+
+The app includes:
+
+- Global metadata in root layout
+- Open Graph image route (`/opengraph-image`)
+- Twitter image route (`/twitter-image`)
+- Robots config with restricted crawling of `/admin` and `/user`
+- Sitemap route for canonical homepage
+
+## Environment Variables
+
+Create `.env.local` with values for:
 
 ```bash
-# MongoDB
-MONGODB_URI=...
+# Database
+MONGODB_URI=
 
 # NextAuth
-NEXTAUTH_SECRET=...
-GITHUB_ID=...
-GITHUB_SECRET=...
-GOOGLE_ID=...
-GOOGLE_SECRET=...
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=
+GITHUB_ID=
+GITHUB_SECRET=
+GOOGLE_ID=
+GOOGLE_SECRET=
 
-# Supabase (public for client upload)
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+# Email
+EMAIL_USER=
+EMAIL_PASS=
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 # Upstash Redis (rate limiting)
-UPSTASH_REDIS_REST_URL=...
-UPSTASH_REDIS_REST_TOKEN=...
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
-Notes:
-- Create a Supabase Storage bucket named `Vault` and allow authenticated uploads.
-- Ensure CORS/public access as appropriate for PDF viewing.
-- For production, set Upstash variables in Vercel Project Settings -> Environment Variables.
-- If using `next/image` for provider avatars, ensure external domains are allowed in `next.config.mjs`:
-  ```js
-  export default {
-    images: {
-      domains: ['avatars.githubusercontent.com', 'lh3.googleusercontent.com'],
-    },
-  };
-  ```
+## Local Development
 
-## 🛡️ Rate Limiting
-
-This app uses Upstash Redis + Upstash Ratelimit for abuse protection in API routes.
-
-- `POST /api/papers`: `5 requests / 10 minutes` per signed-in user email
-- `PATCH /api/papers`: `30 requests / 10 minutes` per admin email
-- `GET /api/papers/search`: `20 requests / minute` per client IP
-
-When the limit is exceeded, the API returns `429` with:
-
-- `Retry-After`
-- `X-RateLimit-Limit`
-- `X-RateLimit-Remaining`
-- `X-RateLimit-Reset`
-
-Implementation lives in `lib/rateLimit.js` and is reused by route handlers.
-
-
-## 🚀 Getting Started (Local)
-
-1. Install deps
-   ```bash
-   npm install
-   ```
-2. Add environment variables to `.env.local` (see above).
-3. Run dev server
-   ```bash
-   npm run dev
-   ```
-4. Open http://localhost:3000
-
-Admin access:
-- Sign in once, then in MongoDB set your user’s `role` to `admin`.
-- Navigate to `/admin` to upload PDFs.
-
-
-## 🧭 Project Structure (key paths)
-
+```bash
+npm install
+npm run dev
 ```
+
+Then open `http://localhost:3000`.
+
+Production commands:
+
+```bash
+npm run build
+npm start
+```
+
+## Key Project Structure
+
+```text
 app/
-  page.js                # Landing
-  layout.js              # Root layout, providers, navbar
-  globals.css            # Theme tokens & components
-  auth/page.js           # Sign-in
-  papers/page.js         # Library + filters
-  papers/[id]/page.js    # PDF viewer
-  admin/page.js          # Admin upload (guarded)
+  layout.js                    # root shell, metadata, providers
+  page.js                      # homepage
+  providers/SessionProvider.js
+  component/                   # shared UI components
+  user/
+    auth/
+    dashboard/
+    papers/
+    profile/
+    upload/
+    contributions/
+  admin/
   api/
-    papers/route.js      # GET/POST papers
-    auth/[...nextauth]/route.js  # NextAuth
-app/component/
-  Navbar.js
-  LoginRequiredModal.js
-  pdfViewer.js
-db/connectDb.js
-models/paper.js
-models/user.js
-middleware.js            # Protects /admin
+    auth/[...nextauth]/route.js
+    papers/route.js
+    papers/search/route.js
+    contributions/route.js
+
+models/
+  user.js
+  paper.js
+  savedPaper.js
+  unlockedPaper.js
+
+db/
+  connectDb.js
+
+lib/
+  rateLimit.js
+  nodemailer.js
+  renderEmail.js
+
+proxy.js                       # admin route guard
+next.config.mjs                # PWA + pdf worker + image config
 ```
 
+## Security Notes
 
-## 🎨 Design Details
+Implemented:
 
-- Custom components: `.card`, `.pill`, `.button`, gradient accents in `app/globals.css`.
-- Subtle grid backgrounds, shadows, motion and hover states.
-- Mobile‑first, responsive, and accessible.
+- Authentication required for uploads
+- Role checks for admin routes and moderation API
+- Rate limiting on upload, moderation, and search endpoints
+- Input normalization and ObjectId validation on API
 
+Recommended hardening for production:
 
-## 📸 Screenshots (optional)
+- Add explicit payload length limits for paper metadata fields
+- Add rate limiting for generic paper listing endpoint
+- Add audit logs for moderation actions
+- Consider private signed URLs for stricter PDF access control
+- Keep secrets out of repository and rotate keys if ever exposed
 
-Add screenshots to `public/` and embed here:
+## Known Implementation Quirks
 
-```markdown
-![Landing](public/landing.png)
-![Papers](public/papers.png)
-![Viewer](public/viewer.png)
-![Admin](public/admin.png)
+- Middleware currently redirects unauthenticated admin access to `/auth`, while sign-in UI lives at `/user/auth`; this is worth normalizing for consistency.
+- `renderEmail.js` helper exists but current auth route uses `@react-email/render` directly.
+- `robots.js` disallows all `/user/` paths, including public pages under that segment.
+
+## Scripts
+
+```json
+{
+  "dev": "next dev --webpack",
+  "build": "next build --webpack",
+  "start": "next start",
+  "lint": "eslint"
+}
 ```
 
+## License
 
-## 📄 License
-
-Personal/portfolio project. Feel free to fork for learning purposes.
-
-
-## 🙌 Credits
-
-- Next.js, Tailwind CSS, NextAuth, Mongoose, Supabase, react-pdf.
-- Geist font by Vercel.
-
+No explicit license file is present in this repository. Add one if you plan public distribution.

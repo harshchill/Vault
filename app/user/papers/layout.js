@@ -5,6 +5,15 @@ export const metadata = {
   alternates: {
     canonical: "/user/papers",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+    },
+  },
   openGraph: {
     title: "Paper Library | Vault",
     description:

@@ -5,6 +5,15 @@ export const metadata = {
   alternates: {
     canonical: "/user/contributions",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+    },
+  },
   openGraph: {
     title: "Contributor Leaderboard | Vault",
     description:

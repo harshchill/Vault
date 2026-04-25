@@ -78,7 +78,7 @@ export default function Navbar() {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md shadow-emerald-200/50 transform transition-all hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-linear-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md shadow-emerald-200/50 transform transition-all hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2"
               >
                 <span className="flex items-center gap-2">
                   <FiUser size={16} />
@@ -116,6 +116,9 @@ export default function Navbar() {
                     <Link href="/user/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors">
                       Profile
                     </Link>
+                    <Link href="/user/saved" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors">
+                      Saved Papers
+                    </Link>
 
                     {/* Sign Out Button */}
                     <button
@@ -150,7 +153,7 @@ export default function Navbar() {
             // Mobile: Show user name as button (hamburger-like)
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md shadow-emerald-200/50"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-linear-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-md shadow-emerald-200/50"
             >
               <span className="text-sm">
                 {session.user.name || session.user.email?.split("@")[0]}
@@ -253,6 +256,13 @@ export default function Navbar() {
                       className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors"
                     >
                       Profile
+                    </Link>
+                    <Link
+                      href="/user/saved"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors"
+                    >
+                      Saved Papers
                     </Link>
 
                     {/* Sign Out Button */}

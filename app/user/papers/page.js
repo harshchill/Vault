@@ -7,6 +7,7 @@ import {
   FiFolder,
   FiFilter,
   FiBookOpen,
+  FiBookmark,
   FiExternalLink,
   FiChevronLeft,
   FiChevronRight,
@@ -16,6 +17,11 @@ import {
   FiLoader,
 } from "react-icons/fi";
 import LoginRequiredModal from "../../component/LoginRequiredModal";
+import {
+  getSavedPaperIds,
+  savePaperForUser,
+  unsavePaperForUser,
+} from "@/app/actions/userActions";
 
 const semesters = [
   "All semesters",
@@ -53,6 +59,8 @@ export default function PapersPage() {
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [savedPaperIds, setSavedPaperIds] = useState(new Set());
+  const [saveLoadingIds, setSaveLoadingIds] = useState(new Set());
 
   const searchDebounceRef = useRef(null);
   const searchBoxRef = useRef(null);
@@ -195,6 +203,30 @@ export default function PapersPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateSavedState = async () => {
+      if (status !== "authenticated" || !session?.user?.email) {
+        if (mounted) {
+          setSavedPaperIds(new Set());
+        }
+        return;
+      }
+
+      const result = await getSavedPaperIds(session.user.email);
+      if (mounted && result?.success && Array.isArray(result.savedPaperIds)) {
+        setSavedPaperIds(new Set(result.savedPaperIds));
+      }
+    };
+
+    hydrateSavedState();
+
+    return () => {
+      mounted = false;
+    };
+  }, [status, session?.user?.email]);
+
   const current = useMemo(() => papers, [papers]);
 
   const programOptions = useMemo(() => {
@@ -256,6 +288,59 @@ export default function PapersPage() {
     }
 
     router.push(`/user/papers/${paperId}`);
+  };
+
+  const handleToggleSave = async (paperId) => {
+    if (!paperId) return;
+
+    if (status === "loading") return;
+
+    if (status === "unauthenticated" || !session?.user?.email) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    if (saveLoadingIds.has(paperId)) return;
+
+    const currentlySaved = savedPaperIds.has(paperId);
+
+    setSaveLoadingIds((prev) => {
+      const next = new Set(prev);
+      next.add(paperId);
+      return next;
+    });
+
+    setSavedPaperIds((prev) => {
+      const next = new Set(prev);
+      if (currentlySaved) {
+        next.delete(paperId);
+      } else {
+        next.add(paperId);
+      }
+      return next;
+    });
+
+    const result = currentlySaved
+      ? await unsavePaperForUser(session.user.email, paperId)
+      : await savePaperForUser(session.user.email, paperId);
+
+    if (!result?.success) {
+      setSavedPaperIds((prev) => {
+        const next = new Set(prev);
+        if (currentlySaved) {
+          next.add(paperId);
+        } else {
+          next.delete(paperId);
+        }
+        return next;
+      });
+    }
+
+    setSaveLoadingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(paperId);
+      return next;
+    });
   };
 
   const noFilterApplied =
@@ -469,7 +554,11 @@ export default function PapersPage() {
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {current.map((paper) => (
+              {current.map((paper) => {
+                const isSaved = savedPaperIds.has(paper.id);
+                const saveLoading = saveLoadingIds.has(paper.id);
+
+                return (
                 <div key={paper.id} className="card p-5 space-y-3 hover:border-emerald-200 transition">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -503,16 +592,37 @@ export default function PapersPage() {
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => handleViewPaper(paper.id)}
-                    disabled={!paper.storageURL}
-                    className="button button-primary w-full mt-4 justify-center disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    <span>View paper</span>
-                    <FiExternalLink size={16} />
-                  </button>
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      onClick={() => handleViewPaper(paper.id)}
+                      disabled={!paper.storageURL}
+                      className="button button-primary flex-1 justify-center disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <span>View paper</span>
+                      <FiExternalLink size={16} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSave(paper.id)}
+                      disabled={saveLoading}
+                      aria-label={isSaved ? "Remove from saved" : "Save paper"}
+                      title={isSaved ? "Remove from saved" : "Save paper"}
+                      className={`h-10 w-10 rounded-lg border flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isSaved
+                          ? "bg-emerald-100 border-emerald-200 text-emerald-700"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {saveLoading ? (
+                        <FiLoader className="animate-spin" size={16} />
+                      ) : (
+                        <FiBookmark size={16} />
+                      )}
+                    </button>
+                  </div>
                 </div>
-              ))}
+              );})}
             </div>
 
             <div className="flex items-center justify-between mt-6">

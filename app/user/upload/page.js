@@ -434,7 +434,7 @@ export default function UploadPage() {
                   required
                   value={formData.institute}
                   onChange={handleChange}
-                  placeholder="e.g. Stanford University"
+                  placeholder="e.g. AKS University"
                   disabled={loading}
                   className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800"
                 />
