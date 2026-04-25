@@ -44,9 +44,16 @@ export default function Footer() {
           <div>
              <h4 className="text-white font-bold mb-6 tracking-wider uppercase text-sm">Legal & Help</h4>
              <ul className="space-y-4 text-sm font-medium">
-               <li><a href="#" className="hover:text-teal-400 transition-colors">Terms of Service</a></li>
-               <li><a href="#" className="hover:text-teal-400 transition-colors">Privacy Policy</a></li>
-               <li><a href="#" className="hover:text-teal-400 transition-colors">Contact Support</a></li>
+               <li><Link href="/terms" className="hover:text-teal-400 transition-colors">Terms of Service</Link></li>
+               <li><Link href="/privacy" className="hover:text-teal-400 transition-colors">Privacy Policy</Link></li>
+               <li>
+                 <a
+                   href="mailto:support@paper-vault.app"
+                   className="hover:text-teal-400 transition-colors"
+                 >
+                   support@paper-vault.app
+                 </a>
+               </li>
              </ul>
           </div>
         </div>

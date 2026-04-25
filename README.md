@@ -1,306 +1,252 @@
 # Vault
 
-A student-first exam paper platform built with Next.js App Router.
-Vault helps users discover, filter, read, and contribute previous semester papers through a clean UI, role-based workflows, and a moderated publishing pipeline.
+Vault is a Next.js 16 exam paper platform where students can discover and read previous semester papers, upload new papers, save favorites, and contribute to a moderated community library.
 
-## Project Snapshot
+## What This App Does
 
-Vault is designed around four product pillars:
+- OAuth authentication via Google/GitHub.
+- Public paper discovery with filtering, pagination, and smart search.
+- Authenticated paper uploads to Supabase Storage.
+- Admin moderation (`pending -> approved/rejected`) before publication.
+- Saved papers library per user.
+- Contribution leaderboard based on approved uploads.
+- PWA support with offline PDF caching strategy.
+- Legal pages: `/terms` and `/privacy`.
 
-- Discovery: searchable and filterable paper library.
-- Study: focused PDF reading experience.
-- Contribution: authenticated uploads by students.
-- Moderation: admin approval system for quality control.
+## Tech Stack
 
-It is not just a file listing app; it combines authentication, moderation, storage, leaderboard aggregation, profile personalization, and PWA capabilities in one cohesive workflow.
+- Next.js 16 App Router + React 19
+- Tailwind CSS v4
+- NextAuth (JWT session strategy)
+- MongoDB + Mongoose
+- Supabase Storage
+- Upstash Redis + `@upstash/ratelimit`
+- Nodemailer + React Email
+- `react-pdf` + `pdfjs-dist`
+- `@ducanh2912/next-pwa`
+- Vercel Analytics + Speed Insights
 
-## Core Stack
+## Architecture Summary
 
-- Framework: Next.js 16 (App Router)
-- UI: React 19 + Tailwind CSS v4
-- Auth: NextAuth (Google and GitHub providers)
-- Database: MongoDB (Mongoose)
-- File storage: Supabase Storage
-- Email: Nodemailer + React Email
-- Rate limiting: Upstash Redis + @upstash/ratelimit
-- PDF rendering: react-pdf + pdfjs-dist
-- PWA: @ducanh2912/next-pwa
-- Runtime analytics: Vercel Analytics + Speed Insights
+### Frontend
 
-## User Flows
+- `app/page.js` is the landing page.
+- `app/user/*` contains user-facing product pages (auth, papers, upload, dashboard, profile, saved, contributions).
+- `app/admin/page.js` contains admin moderation UI.
+- Shared shell (navbar/footer/metadata/providers) lives in `app/layout.js`.
 
-### 1) Visitor flow
+### Backend
 
-1. Land on homepage and view recent approved papers.
-2. Open library and browse by search + filters.
-3. Try to open a paper.
-4. Get login-required prompt.
+- `app/api/auth/[...nextauth]/route.js` handles OAuth, JWT/session callbacks, user bootstrap, and welcome email.
+- `app/api/papers/route.js` handles paper CRUD-like workflow (list, create, moderation status update).
+- `app/api/papers/search/route.js` handles weighted relevance search.
+- `app/api/contributions/route.js` serves leaderboard aggregation.
 
-### 2) Authenticated student flow
+### Data Layer
 
-1. Sign in via Google/GitHub.
-2. Access dashboard and profile.
-3. Upload a PDF and metadata.
-4. Submission is created as `pending`.
-5. View approved papers and open PDF viewer.
+- `db/connectDb.js` opens MongoDB connection.
+- Models in `models/`:
+  - `User`
+  - `Paper`
+  - `SavedPaper`
+  - `UnlockedPaper` (model exists; currently not actively used by page flows)
 
-### 3) Admin flow
+### Security/Access
 
-1. Access `/admin` (role must be `admin`).
-2. Review pending submissions.
-3. Approve or reject each paper.
-4. Approved papers become visible in public/user library and leaderboard aggregation.
+- Admin route protection is done in `proxy.js` for `/admin/:path*`.
+- API-level role checks enforce admin-only status access/moderation.
+- Rate limiting policies are centralized in `lib/rateLimit.js`.
 
 ## Route Map
 
-### Public / common routes
+### Public routes
 
-- `/` - homepage with hero, features, and recent approved papers
-- `/user/auth` - OAuth sign-in page
-- `/user/papers` - paper discovery page (search + filters + pagination)
-- `/user/contributions` - contributor leaderboard
+- `/` home
+- `/terms` terms and conditions
+- `/privacy` privacy policy
+- `/user/auth` login/signup
+- `/user/papers` paper browsing
+- `/user/contributions` leaderboard
 
-### Auth-required routes
+### Mostly auth-required routes
 
-- `/user/dashboard` - personal stats and recent library activity
-- `/user/profile` - editable profile details
-- `/user/upload` - submit new paper PDF + metadata
-- `/user/papers/[id]` - individual paper reader page
+- `/user/dashboard`
+- `/user/profile`
+- `/user/upload`
+- `/user/saved`
+- `/user/papers/[id]` (intended for signed-in users; currently not server-blocked)
 
 ### Admin-only routes
 
-- `/admin` - moderation dashboard (overview + approve/reject pending papers)
+- `/admin`
 
 ## API Surface
 
-### Papers API: `/api/papers`
+### `GET /api/papers`
 
-#### `GET /api/papers`
+- Lists papers with filters and pagination.
+- Default `status=approved`.
+- Supports: `semester`, `year`, `institute`, `subject`, `specialization`, `program`, `id`, `status`, `limit`, `offset`.
+- `status != approved` requires admin.
 
-- Purpose: list papers with server-side filtering and pagination
-- Default status filter: `approved`
-- Supports query params:
-  - `semester`, `year`, `institute`, `subject`, `specialization`, `program`, `id`
-  - `status` (`approved|pending|rejected`)
-  - `limit` (default 12, max 50), `offset`
-- Protection:
-  - Non-approved statuses require admin token
-- Returns pagination metadata:
-  - `count`, `total`, `limit`, `offset`, `hasMore`, `nextOffset`, `prevOffset`
+### `POST /api/papers`
 
-#### `POST /api/papers`
+- Creates a paper submission.
+- Requires authenticated user token.
+- Enforces rate limit policy: `paperUpload` (`5 / 10m` per user email).
+- New records default to `status: pending`.
 
-- Purpose: create paper submission
-- Requires authenticated user
-- Rate limit policy: `paperUpload` (5 requests / 10 minutes per email)
-- Required payload fields:
-  - `institute`, `subject`, `semester`, `year`, `specialization`, `program`, `storageURL`, `storageFileName`
-- Creates papers with defaults:
-  - `status: pending`, `isExtracted: false`, `unlockCounts: 0`, `saveCounts: 0`
+### `PATCH /api/papers`
 
-#### `PATCH /api/papers`
+- Updates paper status.
+- Requires admin token.
+- Enforces rate limit policy: `paperModeration` (`30 / 10m` per admin email).
 
-- Purpose: moderation update (`approved|pending|rejected`)
-- Requires admin role
-- Rate limit policy: `paperModeration` (30 requests / 10 minutes per admin email)
-- Required payload:
-  - `paperId`, `status`
+### `GET /api/papers/search`
 
-### Smart search API: `/api/papers/search`
+- Smart search on `subject`, `program`, `specialization`.
+- Enforces rate limit policy: `paperSearch` (`20 / 60s` per client IP).
+- Weighted relevance ranking via Mongo aggregation.
 
-#### `GET /api/papers/search`
+### `GET /api/contributions`
 
-- Purpose: lightweight relevance-ranked search
-- Rate limit policy: `paperSearch` (20 requests / 60 seconds per client IP)
-- Query params:
-  - `q` (min 2 chars), `limit` (default 20, max 50), optional `status` (default `approved`)
-- Search fields:
-  - `subject`, `program`, `specialization`
-- Ranking strategy:
-  - weighted relevance score via MongoDB aggregation
+- Aggregates approved paper count by uploader.
+- Returns ranked leaderboard with user identity fields.
 
-### Contributions API: `/api/contributions`
-
-#### `GET /api/contributions`
-
-- Purpose: leaderboard of contributors
-- Logic:
-  - aggregate approved papers by `uploaderID`
-  - rank descending by contribution count
-  - enrich with user identity fields (`name`, `email`, `image`)
-
-### Auth API: `/api/auth/[...nextauth]`
-
-- NextAuth route handling login callbacks/session/JWT
-- Providers: Google and GitHub
-- New-user behavior:
-  - create user record with role `user`
-  - send welcome email
-
-## Data Model
+## Data Models
 
 ### `User`
 
-- `email` (required, unique)
+- `email` (unique, required)
 - `name` (required)
-- `role` (`user|admin`, default `user`)
+- `role` (`user | admin`, default `user`)
 - `image`
 - `university`, `program`, `specialization`, `semester`
 - `createdAt`
 
 ### `Paper`
 
-- `uploaderID` (ObjectId ref -> User)
-- `institute`, `subject`, `program`, `specialization`
-- `semester`, `year`
-- `status` (`approved|pending|rejected`, default `pending`)
-- `isExtracted` (default `false`)
+- `uploaderID` (`User` ref, required)
+- `institute`, `subject`, `program`, `specialization` (required)
+- `semester`, `year` (required)
+- `status` (`approved | pending | rejected`, default `pending`)
 - `storageFileName`, `storageURL`
-- `unlockCounts`, `saveCounts`
-- `uploadedAt`
-
-Indexes include:
-
-- `{ status: 1, uploadedAt: -1 }`
-- `{ uploaderID: 1, status: 1 }`
-- `{ specialization: 1, program: 1, semester: 1, year: 1, status: 1 }`
+- `isExtracted`, `unlockCounts`, `saveCounts`, `uploadedAt`
+- indexes:
+  - `{ status: 1, uploadedAt: -1 }`
+  - `{ uploaderID: 1, status: 1 }`
+  - `{ specialization: 1, program: 1, semester: 1, year: 1, status: 1 }`
 
 ### `SavedPaper`
 
-- `userId` (ref User)
-- `paperId` (ref Paper)
-- `savedAt`
-- unique composite index `{ userId: 1, paperId: 1 }`
+- `userId`, `paperId`, `savedAt`
+- unique index on `{ userId, paperId }`
 
 ### `UnlockedPaper`
 
-- `userId` (ref User)
-- `paperId` (ref Paper)
-- `unlockedAt`
-- unique composite index `{ userId: 1, paperId: 1 }`
+- `userId`, `paperId`, `unlockedAt`
+- unique index on `{ userId, paperId }`
 
-## Authentication and Authorization
+## SEO, Legal, and Discovery
 
-- OAuth providers: Google + GitHub
-- Session strategy: JWT via NextAuth
-- Role attached to token and session (`session.user.role`)
-- Middleware protection for `/admin` in `proxy.js`
-- API-level admin enforcement for moderation endpoints
-- UI-level role guards in admin and navbar
+- Global metadata is defined in `app/layout.js`.
+- OpenGraph image route: `/opengraph-image`
+- Twitter image route: `/twitter-image`
+- Robots policy in `app/robots.js`
+- Sitemap generation in `app/sitemap.js` includes:
+  - static public routes (`/`, `/terms`, `/privacy`, `/user/papers`, `/user/contributions`)
+  - dynamic approved paper detail pages (`/user/papers/:id`)
 
-## Upload and Moderation Pipeline
+## PWA and PDF Behavior
 
-1. User uploads PDF from `/user/upload`.
-2. Frontend validates file type and size (PDF, <= 10MB).
-3. File uploads to Supabase bucket `Vault`.
-4. Public URL is generated from Supabase.
-5. Metadata is posted to `POST /api/papers`.
-6. Record is stored with status `pending`.
-7. Admin reviews and updates status with `PATCH /api/papers`.
-
-## PDF Experience
-
-- PDF worker copied to `/public/pdf.worker.min.js` during build
-- `react-pdf` renders all pages in custom viewer
-- Responsive page-width calculation
-- Right-click and text/annotation layers are disabled in viewer UI
-
-## Search and Discovery
-
-Library page combines:
-
-- Server-side filtering by structured fields
-- Client-side control state for filters and pagination
-- Debounced smart search against `/api/papers/search`
-- Result cards with subject, semester, year, program, specialization, institute
-
-## PWA and Offline Behavior
-
-- PWA integration through `@ducanh2912/next-pwa`
-- Service worker emitted into `public/`
-- Runtime cache rule for Supabase PDF URLs:
-  - strategy: `CacheFirst`
-  - cache: `vault-papers-cache`
-  - max entries: 50
-  - max age: 30 days
-- Manifest configured at `public/manifest.json`
-
-## SEO and Metadata
-
-The app includes:
-
-- Global metadata in root layout
-- Open Graph image route (`/opengraph-image`)
-- Twitter image route (`/twitter-image`)
-- Robots config with restricted crawling of `/admin` and `/user`
-- Sitemap route for canonical homepage
+- PWA is configured in `next.config.mjs` with `@ducanh2912/next-pwa`.
+- Service worker and workbox assets are emitted to `public/`.
+- Supabase-hosted PDF files are runtime-cached with `CacheFirst`.
+- `pdf.worker.min.js` is copied at build time and used by `react-pdf`.
 
 ## Environment Variables
 
-Create `.env.local` with values for:
+Create `.env.local`:
 
 ```bash
-# Database
+# MongoDB
 MONGODB_URI=
 
 # NextAuth
+NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=
-NEXTAUTH_URL=
-GITHUB_ID=
-GITHUB_SECRET=
 GOOGLE_ID=
 GOOGLE_SECRET=
+GITHUB_ID=
+GITHUB_SECRET=
 
-# Email
+# Email (welcome mail)
 EMAIL_USER=
 EMAIL_PASS=
 
-# Supabase
+# Supabase (client upload path uses public anon key)
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
-# Upstash Redis (rate limiting)
+# Upstash rate limiting
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 ```
 
-## Local Development
+Notes:
+
+- Without Upstash vars in local dev, rate limit checks fall back gracefully.
+- Keep all secrets out of git and rotate immediately if exposed.
+
+## Local Setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-Production commands:
+### Production build
 
 ```bash
 npm run build
-npm start
+npm run start
 ```
 
-## Key Project Structure
+## Admin Bootstrapping
+
+New users are created with role `user` by default.
+To grant admin access, update the user document in MongoDB and set:
+
+```json
+{ "role": "admin" }
+```
+
+Admin access gates:
+
+- route-level guard in `proxy.js`
+- API-level role checks in `PATCH /api/papers` and non-approved status access
+
+## Project Structure
 
 ```text
 app/
-  layout.js                    # root shell, metadata, providers
-  page.js                      # homepage
-  providers/SessionProvider.js
-  component/                   # shared UI components
-  user/
-    auth/
-    dashboard/
-    papers/
-    profile/
-    upload/
-    contributions/
-  admin/
   api/
     auth/[...nextauth]/route.js
     papers/route.js
     papers/search/route.js
     contributions/route.js
+  admin/
+  user/
+  component/
+  providers/
+  layout.js
+  page.js
+  robots.js
+  sitemap.js
+  terms/page.js
+  privacy/page.js
 
 models/
   user.js
@@ -308,40 +254,18 @@ models/
   savedPaper.js
   unlockedPaper.js
 
-db/
-  connectDb.js
-
-lib/
-  rateLimit.js
-  nodemailer.js
-  renderEmail.js
-
-proxy.js                       # admin route guard
-next.config.mjs                # PWA + pdf worker + image config
+db/connectDb.js
+lib/rateLimit.js
+lib/nodemailer.js
+proxy.js
+next.config.mjs
 ```
 
-## Security Notes
+## Current Known Gaps
 
-Implemented:
-
-- Authentication required for uploads
-- Role checks for admin routes and moderation API
-- Rate limiting on upload, moderation, and search endpoints
-- Input normalization and ObjectId validation on API
-
-Recommended hardening for production:
-
-- Add explicit payload length limits for paper metadata fields
-- Add rate limiting for generic paper listing endpoint
-- Add audit logs for moderation actions
-- Consider private signed URLs for stricter PDF access control
-- Keep secrets out of repository and rotate keys if ever exposed
-
-## Known Implementation Quirks
-
-- Middleware currently redirects unauthenticated admin access to `/auth`, while sign-in UI lives at `/user/auth`; this is worth normalizing for consistency.
-- `renderEmail.js` helper exists but current auth route uses `@react-email/render` directly.
-- `robots.js` disallows all `/user/` paths, including public pages under that segment.
+- `proxy.js` redirects unauthenticated `/admin` users to `/auth`, while UI sign-in route is `/user/auth`.
+- Admin UI currently references `paper.title` in places, but paper API payload uses `subject`.
+- `lib/renderEmail.js` exists but current auth flow uses `@react-email/render` directly.
 
 ## Scripts
 
@@ -356,4 +280,4 @@ Recommended hardening for production:
 
 ## License
 
-No explicit license file is present in this repository. Add one if you plan public distribution.
+No license file is currently present. Add one before public distribution.
