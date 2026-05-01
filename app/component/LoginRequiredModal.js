@@ -23,7 +23,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiX, FiLogIn, FiLock } from 'react-icons/fi';
 
-export default function LoginRequiredModal({ isOpen, onClose }) {
+export default function LoginRequiredModal({ isOpen, onClose, callbackUrl = "/user/dashboard" }) {
   const router = useRouter();
 
   // Close modal on Escape key press
@@ -53,7 +53,7 @@ export default function LoginRequiredModal({ isOpen, onClose }) {
    * Handles navigation to login page
    */
   const handleLogin = () => {
-    router.push('/user/auth');
+    router.push(`/user/auth?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   };
 
   /**

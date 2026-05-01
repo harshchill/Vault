@@ -314,3 +314,31 @@ export async function getSavedPapers(email) {
     return { success: false, error: "Failed to fetch saved papers" };
   }
 }
+
+export async function getPaperPdfUrl(paperId) {
+  try {
+    if (!isValidObjectId(paperId)) {
+      return { success: false, error: "Invalid paper id" };
+    }
+
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    await connectDB();
+
+    const paper = await Paper.findOne({ _id: paperId, status: "approved" })
+      .select("storageURL")
+      .lean();
+
+    if (!paper?.storageURL) {
+      return { success: false, error: "Paper PDF not available" };
+    }
+
+    return { success: true, url: paper.storageURL };
+  } catch (error) {
+    console.error("Error fetching paper PDF URL:", error);
+    return { success: false, error: "Failed to fetch paper PDF" };
+  }
+}

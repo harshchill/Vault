@@ -4,21 +4,31 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { FiGithub, FiCheckCircle } from "react-icons/fi";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 export default function AuthPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const callbackUrl = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "/user/dashboard";
+    }
+
+    return (
+      new URLSearchParams(window.location.search).get("callbackUrl") ||
+      "/user/dashboard"
+    );
+  }, []);
 
   const handleSignIn = async (provider) => {
-    await signIn(provider, { callbackUrl: "/user/dashboard" });
-  }
+    await signIn(provider, { callbackUrl });
+  };
 
   useEffect(() => {
-    if(status === "authenticated" && session){
-      router.push("/user/dashboard");
+    if (status === "authenticated" && session) {
+      router.push(callbackUrl);
     }
-  }, [session, status, router]);
+  }, [callbackUrl, session, status, router]);
 
   return (
     <div className="min-h-[90vh] flex items-center justify-center p-4 relative overflow-hidden bg-background">

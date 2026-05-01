@@ -37,8 +37,8 @@ const getPaperEntries = async () => {
   return papers.map((paper) => ({
     url: toAbsoluteUrl(`/user/papers/${paper._id}`),
     lastModified: paper.uploadedAt ? new Date(paper.uploadedAt) : new Date(),
-    changeFrequency: "monthly",
-    priority: 0.8,
+    changeFrequency: "weekly",
+    priority: 0.85,
   }));
 };
 

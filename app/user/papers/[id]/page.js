@@ -1,204 +1,199 @@
-"use client";
+import Link from "next/link";
+import { isValidObjectId } from "mongoose";
+import { notFound } from "next/navigation";
+import {
+  FiArrowLeft,
+  FiBook,
+  FiCalendar,
+  FiFileText,
+} from "react-icons/fi";
+import connectDB from "@/db/connectDb";
+import Paper from "@/models/paper";
+import PaperViewerGate from "@/app/component/PaperViewerGate";
 
-/**
- * Paper View Page
- * 
- * Displays a single exam paper PDF using the custom PdfViewer component.
- * Fetches paper data from the database and renders the PDF as images.
- * 
- * Features:
- * - Fetches paper metadata from API
- * - Renders PDF using react-pdf (custom viewer)
- * - Displays paper information (title, subject, semester, year)
- * - Navigation back to papers list
- * - Loading and error states
- * 
- * Route: /papers/[id]
- * 
- * @component
- * @returns {JSX.Element} PDF viewer page
- */
+const baseUrl = "https://paper-vault.app";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { FiArrowLeft, FiFileText, FiCalendar, FiBook } from 'react-icons/fi';
-import PdfViewer from '../../../component/pdfViewer';
+async function getPaperById(paperId) {
+  if (!paperId || !isValidObjectId(paperId)) {
+    return null;
+  }
 
-export default function PaperViewPage() {
-  const params = useParams();
-  const router = useRouter();
-  const paperId = params.id;
+  await connectDB();
 
-  // State management
-  const [paper, setPaper] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const paper = await Paper.findOne({ _id: paperId, status: "approved" })
+    .select("subject institute program specialization semester year uploadedAt")
+    .lean();
 
-  // Fetch paper data from API
-  useEffect(() => {
-    const fetchPaper = async () => {
-      if (!paperId) {
-        setError('Paper ID is required');
-        setLoading(false);
-        return;
-      }
+  if (!paper) {
+    return null;
+  }
 
-      try {
-        setLoading(true);
-        setError(null);
+  return {
+    id: paper._id.toString(),
+    subject: paper.subject,
+    institute: paper.institute,
+    program: paper.program,
+    specialization: paper.specialization,
+    semester: paper.semester,
+    year: paper.year,
+    uploadedAt: paper.uploadedAt,
+  };
+}
 
-        // Fetch only the requested paper using server filter (id) with limit=1
-        const response = await fetch(`/api/papers?id=${encodeURIComponent(paperId)}&limit=1&offset=0`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
+function buildStructuredData(paper) {
+  const name = [
+    paper.subject,
+    paper.institute,
+    paper.program,
+    paper.specialization,
+    paper.semester ? `Semester ${paper.semester}` : null,
+    paper.year ? String(paper.year) : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
 
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to fetch paper');
-        }
+  return {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name,
+    description: `${paper.subject} paper for ${paper.institute || "students"}, ${paper.program || "academic program"}, Semester ${paper.semester}, ${paper.year}.`,
+    provider: {
+      "@type": "Organization",
+      name: "Vault",
+      url: baseUrl,
+    },
+    educationalLevel: paper.program,
+    about: [paper.subject, paper.specialization, paper.institute].filter(Boolean),
+    datePublished: paper.uploadedAt,
+    url: `${baseUrl}/user/papers/${paper.id}`,
+    isAccessibleForFree: false,
+  };
+}
 
-        if (Array.isArray(data.papers) && data.papers.length > 0) {
-          setPaper(data.papers[0]);
-        } else {
-          setError('Invalid response format from server.');
-        }
-      } catch (err) {
-        console.error('Error fetching paper:', err);
-        setError(err.message || 'Failed to load paper. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
+function DetailChip({ children, tone = "slate" }) {
+  const tones = {
+    emerald: "bg-emerald-50 text-emerald-700",
+    teal: "bg-teal-50 text-teal-700",
+    slate: "bg-slate-100 text-slate-700",
+  };
 
-    fetchPaper();
-  }, [paperId]);
+  return (
+    <span className={`rounded-full px-3 py-1 text-sm font-medium ${tones[tone]}`}>
+      {children}
+    </span>
+  );
+}
 
-  
+export default async function PaperViewPage({ params }) {
+  const resolvedParams = await params;
+  const paper = await getPaperById(resolvedParams?.id);
+
+  if (!paper) {
+    notFound();
+  }
+
+  const structuredData = buildStructuredData(paper);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header with paper info and navigation */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* Back button and title */}
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={() => router.push('/user/papers')}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              <FiArrowLeft size={20} />
-              <span className="font-medium">Back to Papers</span>
-            </button>
-          </div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
 
-          {/* Paper metadata */}
-          {paper && (
-            <div className="flex flex-wrap items-center gap-4 text-sm">
+      <div className="border-b border-gray-200 bg-white shadow-sm">
+        <div className="mx-auto max-w-7xl px-4 py-5">
+          <Link
+            href="/user/papers"
+            className="mb-5 inline-flex items-center gap-2 text-slate-600 transition-colors hover:text-slate-900"
+          >
+            <FiArrowLeft size={20} />
+            <span className="font-medium">Back to Papers</span>
+          </Link>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <span className="pill">Public paper page</span>
+              <h1 className="text-3xl font-semibold text-slate-900 md:text-4xl">
+                {paper.subject}
+              </h1>
+              <p className="max-w-3xl text-slate-600">
+                Browse the paper details before signing in. The PDF viewer unlocks after login.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-sm">
               <div className="flex items-center gap-2 text-slate-700">
                 <FiFileText className="text-emerald-600" size={18} />
-                <span className="font-semibold text-lg">{paper.subject}</span>
+                <span className="font-medium">{paper.subject}</span>
               </div>
-              
-              {paper.subject && (
-                <div className="flex items-center gap-2 text-slate-600">
-                  <FiBook size={16} />
-                  <span>{paper.subject}</span>
+
+              {paper.institute ? (
+                <div className="flex items-center gap-2 text-slate-700">
+                  <FiBook className="text-emerald-600" size={18} />
+                  <span>{paper.institute}</span>
                 </div>
-              )}
-              
-              <div className="flex items-center gap-2 text-slate-600">
-                <span>Semester {paper.semester}</span>
-              </div>
-              
-              {paper.specialization && (
-                <div className="flex items-center gap-2 text-slate-600">
-                  <span className="px-2 py-1 rounded bg-emerald-50 text-emerald-700 text-xs font-medium">
-                    {paper.specialization}
-                  </span>
-                </div>
-              )}
-              
-              {paper.program && (
-                <div className="flex items-center gap-2 text-slate-600">
-                  <span className="px-2 py-1 rounded bg-teal-50 text-teal-700 text-xs font-medium">
-                    {paper.program}
-                  </span>
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2 text-slate-600">
-                <FiCalendar size={16} />
+              ) : null}
+
+              <div className="flex items-center gap-2 text-slate-700">
+                <FiCalendar className="text-emerald-600" size={18} />
                 <span>{paper.year}</span>
               </div>
             </div>
-          )}
+
+            <div className="flex flex-wrap gap-2">
+              <DetailChip tone="slate">Semester {paper.semester}</DetailChip>
+              {paper.program ? <DetailChip tone="teal">{paper.program}</DetailChip> : null}
+              {paper.specialization ? (
+                <DetailChip tone="emerald">{paper.specialization}</DetailChip>
+              ) : null}
+              {paper.institute ? <DetailChip>{paper.institute}</DetailChip> : null}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Institute
+                </p>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  {paper.institute || "Not specified"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Program
+                </p>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  {paper.program || "Not specified"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Specialization
+                </p>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  {paper.specialization || "Not specified"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Session
+                </p>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  Semester {paper.semester} • {paper.year}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main content area */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Loading state */}
-        {loading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-4">
-              <svg 
-                className="animate-spin h-8 w-8 text-emerald-600" 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24"
-              >
-                <circle 
-                  className="opacity-25" 
-                  cx="12" 
-                  cy="12" 
-                  r="10" 
-                  stroke="currentColor" 
-                  strokeWidth="4"
-                />
-                <path 
-                  className="opacity-75" 
-                  fill="currentColor" 
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              <p className="text-slate-600">Loading paper...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
-            <p className="text-red-800 font-medium text-lg mb-2">{error}</p>
-            <button
-              onClick={() => router.push('/user/papers')}
-              className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Go Back to Papers
-            </button>
-          </div>
-        )}
-
-        {/* PDF Viewer */}
-        {paper && paper.storageURL && !loading && (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden w-full">
-            <PdfViewer url={paper.storageURL} />
-          </div>
-        )}
-
-        {/* No URL error */}
-        {paper && !paper.storageURL && !loading && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center max-w-2xl mx-auto">
-            <p className="text-yellow-800 font-medium">
-              This paper does not have a PDF URL available.
-            </p>
-          </div>
-        )}
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <PaperViewerGate paperId={paper.id} paperTitle={paper.subject} />
       </div>
     </div>
   );
 }
-

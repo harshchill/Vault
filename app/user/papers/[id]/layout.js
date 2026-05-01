@@ -45,7 +45,7 @@ export async function generateMetadata({ params }) {
     await connectDB();
 
     const paper = await Paper.findOne({ _id: paperId, status: "approved" })
-      .select("subject semester year program specialization")
+      .select("subject semester year program specialization institute")
       .lean();
 
     if (!paper) {
@@ -55,10 +55,11 @@ export async function generateMetadata({ params }) {
     const subject = paper.subject || "Exam";
     const semester = paper.semester ? `Semester ${paper.semester}` : "Semester paper";
     const year = paper.year ? String(paper.year) : "Past year";
+    const institute = paper.institute ? ` | ${paper.institute}` : "";
     const program = paper.program ? ` for ${paper.program}` : "";
     const specialization = paper.specialization ? ` (${paper.specialization})` : "";
-    const title = `${subject} ${semester} ${year}${specialization}`;
-    const description = `Download and review ${subject} ${semester} ${year}${program}${specialization} on Vault.`;
+    const title = `${subject} ${semester} ${year}${institute}${specialization}`;
+    const description = `Review ${subject} ${semester} ${year}${program}${specialization}${paper.institute ? ` from ${paper.institute}` : ""} on Vault.`;
     const canonicalPath = `/user/papers/${paperId}`;
 
     return {
