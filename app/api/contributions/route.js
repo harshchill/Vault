@@ -18,7 +18,7 @@ export async function GET() {
     const userIds = agg.map((a) => a._id).filter(Boolean);
 
     const users = await User.find({ _id: { $in: userIds } })
-      .select('_id email name image')
+      .select('_id name image')
       .lean();
 
     const userMap = new Map(users.map((u) => [String(u._id), u]));
@@ -31,7 +31,6 @@ export async function GET() {
       return {
         rank: idx + 1,
         id: userId,
-        email: u?.email || null,
         count: a.count,
         name,
         firstName,

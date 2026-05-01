@@ -4,7 +4,7 @@ const PaperSchema = new mongoose.Schema({
   uploaderID: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: false,
   },
   institute: { type: String, required: true, trim: true },
   subject: { type: String, required: true, trim: true },

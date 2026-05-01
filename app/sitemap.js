@@ -10,7 +10,6 @@ const staticRoutes = [
   { path: "/terms", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacy", changeFrequency: "monthly", priority: 0.5 },
   { path: "/user/papers", changeFrequency: "daily", priority: 0.9 },
-  { path: "/user/contributions", changeFrequency: "weekly", priority: 0.7 },
 ];
 
 const toAbsoluteUrl = (path) => `${baseUrl}${path}`;
