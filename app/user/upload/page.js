@@ -197,6 +197,7 @@ export default function UploadPage() {
     customSpecialization: '',
   });
   const [specializationOptions, setSpecializationOptions] = useState([]);
+  const [instituteOptions, setInstituteOptions] = useState([]);
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -234,6 +235,23 @@ export default function UploadPage() {
     // Reset specialization when program changes
     setFormData((prev) => ({ ...prev, specialization: '', customSpecialization: '' }));
   }, [formData.program]);
+
+  // Fetch institute suggestions from approved papers
+  useEffect(() => {
+    const fetchInstitutes = async () => {
+      try {
+        const response = await fetch('/api/papers?distinct=institute');
+        const data = await response.json();
+        if (response.ok && data.success && Array.isArray(data.institutes)) {
+          setInstituteOptions(data.institutes);
+        }
+      } catch (err) {
+        console.error('Failed to fetch institute options:', err);
+      }
+    };
+
+    fetchInstitutes();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -436,8 +454,14 @@ export default function UploadPage() {
                   onChange={handleChange}
                   placeholder="e.g. AKS University"
                   disabled={loading}
+                  list="institute-options"
                   className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 outline-none transition-all shadow-sm font-medium text-slate-800"
                 />
+                <datalist id="institute-options">
+                  {instituteOptions.map((institute) => (
+                    <option key={institute} value={institute} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="space-y-2 md:col-span-2">

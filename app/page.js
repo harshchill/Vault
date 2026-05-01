@@ -70,19 +70,31 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             {isAuthenticated ? (
-              <Link href="/user/papers" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white bg-slate-900 rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-slate-900/10 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
-                <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-linear-to-b from-transparent via-transparent to-black" />
-                <span className="relative flex items-center gap-2">
-                  My Library <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
-                </span>
-              </Link>
+              <>
+                <Link href="/user/dashboard" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white bg-slate-900 rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-slate-900/10 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
+                  <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-linear-to-b from-transparent via-transparent to-black" />
+                  <span className="relative flex items-center gap-2">
+                    Go to dashboard <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+                <Link href="/user/papers" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white bg-slate-900 rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-slate-900/10 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
+                  <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-linear-to-b from-transparent via-transparent to-black" />
+                  <span className="relative flex items-center gap-2">
+                    Go to library <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+              </>
             ) : (
-              <Link href="/user/auth" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white bg-teal-600 rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-teal-600/20 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2">
-                <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-linear-to-b from-transparent via-transparent to-black" />
-                <span className="relative flex items-center gap-2">
-                  Start studying <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
-                </span>
-              </Link>
+          
+              
+              <Link href="/user/papers" className="group relative inline-flex items-center justify-center px-8 py-3.5 text-base font-semibold text-white bg-slate-900 rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-slate-900/10 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2">
+                  <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-linear-to-b from-transparent via-transparent to-black" />
+                  <span className="relative flex items-center gap-2">
+                    Go to library <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </Link>
+              
+              
             )}
             
             <Link href="#features" className="px-8 py-3.5 text-base font-semibold text-slate-600 hover:text-slate-900 transition-colors">
