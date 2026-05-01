@@ -280,13 +280,6 @@ export default function PapersPage() {
   const handleViewPaper = (paperId) => {
     if (!paperId) return;
 
-    if (status === "loading") return;
-
-    if (status === "unauthenticated" || !session) {
-      setShowLoginModal(true);
-      return;
-    }
-
     router.push(`/user/papers/${paperId}`);
   };
 
@@ -355,6 +348,7 @@ export default function PapersPage() {
       <LoginRequiredModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
+        callbackUrl="/user/papers"
       />
 
       <div className="max-w-6xl mx-auto px-4 py-14 space-y-10">
