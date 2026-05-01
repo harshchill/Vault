@@ -233,6 +233,23 @@ export async function getPendingPapers() {
 }
 
 /**
+ * GET Approved Papers (lightweight)
+ */
+export async function getApprovedPapersForMatching() {
+  await requireAdmin();
+  await connectDB();
+
+  const papers = await Paper.find({ status: "approved" })
+    .select(
+      "subject title institute program specialization semester year storageURL uploadedAt"
+    )
+    .sort({ uploadedAt: -1 })
+    .lean();
+
+  return serializeDoc(papers);
+}
+
+/**
  * APPROVE / REJECT Paper
  */
 export async function approveRejectPaper(paperId, status) {

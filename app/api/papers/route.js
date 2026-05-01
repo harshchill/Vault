@@ -239,6 +239,7 @@ export async function GET(request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
+    const distinct = normalizeString(searchParams.get("distinct")).toLowerCase();
     const semester = searchParams.get("semester");
     const year = searchParams.get("year");
     const institute = searchParams.get("institute");
@@ -276,6 +277,33 @@ export async function GET(request) {
     }
 
     const filter = { status: statusQuery };
+
+    if (distinct) {
+      if (distinct !== "institute") {
+        return NextResponse.json(
+          { error: "Invalid distinct field. Use distinct=institute." },
+          { status: 400 }
+        );
+      }
+
+      const institutes = await Paper.distinct("institute", filter);
+      const normalized = institutes
+        .filter((value) => typeof value === "string" && value.trim())
+        .map((value) => value.trim());
+
+      normalized.sort((a, b) =>
+        a.localeCompare(b, "en", { sensitivity: "base" })
+      );
+
+      return NextResponse.json(
+        {
+          success: true,
+          count: normalized.length,
+          institutes: normalized,
+        },
+        { status: 200 }
+      );
+    }
 
     if (semester) {
       const semesterNum = Number(semester);

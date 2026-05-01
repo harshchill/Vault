@@ -1,4 +1,4 @@
-import { getPendingPapers } from "@/app/actions/adminActions";
+import { getApprovedPapersForMatching, getPendingPapers } from "@/app/actions/adminActions";
 import ApprovalsClient from "./ApprovalsClient";
 import { getServerSession } from "next-auth";
 import { authoptions } from "@/app/api/auth/[...nextauth]/route";
@@ -15,6 +15,12 @@ export default async function ApprovalsPage() {
   }
 
   const pendingPapers = await getPendingPapers();
+  const approvedPapers = await getApprovedPapersForMatching();
 
-  return <ApprovalsClient initialPapers={pendingPapers} />;
+  return (
+    <ApprovalsClient
+      initialPapers={pendingPapers}
+      approvedPapers={approvedPapers}
+    />
+  );
 }
