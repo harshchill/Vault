@@ -8,7 +8,7 @@ import { render } from "@react-email/render";
 import WelcomeEmail from "@/app/component/emailTemplates/WelcomeEmail";
 import path from "path";
 
-export const authoptions = NextAuth({
+export const authoptions = {
   // Configure one or more authentication providers
   providers: [
     GitHubProvider({
@@ -207,5 +207,6 @@ export const authoptions = NextAuth({
       return session;
     },
   },
-});
-export { authoptions as GET, authoptions as POST };
+};
+const handler = NextAuth(authoptions);
+export { handler as GET, handler as POST };

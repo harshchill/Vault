@@ -5,11 +5,12 @@ export default function robots() {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/terms", "/privacy", "/user/papers", "/user/papers/", "/user/contributions"],
+        allow: ["/", "/terms", "/privacy", "/user/papers", "/user/papers/"],
         disallow: [
           "/admin",
           "/api",
           "/user/auth",
+          "/user/contributions",
           "/user/dashboard",
           "/user/profile",
           "/user/saved",
