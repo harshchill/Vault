@@ -3,10 +3,10 @@ import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { User } from "@/models/user";
 import connectDB from "@/db/connectDb";
-import { transporter, mailOptions } from "@/lib/nodemailer";
-import { render } from "@react-email/render";
+import { Resend } from "resend";
 import WelcomeEmail from "@/app/component/emailTemplates/WelcomeEmail";
-import path from "path";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const authoptions = {
   // Configure one or more authentication providers
@@ -82,31 +82,20 @@ export const authoptions = {
 
         if (!currentUser) {
           try {
-            const baseUrl = process.env.NEXTAUTH_URL || '';
-            const emailHtml = await render(
-              <WelcomeEmail
+            const baseUrl = process.env.NEXTAUTH_URL || "https://vault.test"; // fallback if no url
+
+            await resend.emails.send({
+              from: process.env.RESEND_FROM_EMAIL || "Vault <onboarding@resend.dev>",
+              to: user.email,
+              subject: "Welcome to Vault! Your journey starts here.",
+              react: <WelcomeEmail
                 userName={user.name || user.email}
                 appName="Vault"
-                iconCid="app-icon"
                 dashboardUrl={baseUrl}
                 websiteUrl={baseUrl}
                 githubUrl="https://github.com/harshchill/Vault"
-                installUrl={baseUrl ? `${baseUrl}?install=1` : ''}
-              />
-            );
-
-            await transporter.sendMail({
-              ...mailOptions,
-              to: user.email,
-              subject: "Welcome to Vault! Your journey starts here.",
-              html: emailHtml,
-              attachments: [
-                {
-                  filename: "icon.png",
-                  path: path.join(process.cwd(), "public", "icon.png"),
-                  cid: "app-icon",
-                },
-              ],
+                installUrl={baseUrl ? `${baseUrl}?install=1` : ""}
+              />,
             });
           } catch (mailErr) {
             console.error("Failed to send welcome email:", mailErr);

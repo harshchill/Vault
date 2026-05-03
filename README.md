@@ -21,7 +21,7 @@ Vault is a Next.js 16 exam paper platform where students can discover and read p
 - MongoDB + Mongoose
 - Supabase Storage
 - Upstash Redis + `@upstash/ratelimit`
-- Nodemailer + React Email
+- Resend + React Email
 - `react-pdf` + `pdfjs-dist`
 - `@ducanh2912/next-pwa`
 - Vercel Analytics + Speed Insights
@@ -180,9 +180,9 @@ GOOGLE_SECRET=
 GITHUB_ID=
 GITHUB_SECRET=
 
-# Email (welcome mail)
-EMAIL_USER=
-EMAIL_PASS=
+# Email (Resend)
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
 
 # Supabase (client upload path uses public anon key)
 NEXT_PUBLIC_SUPABASE_URL=
@@ -256,7 +256,6 @@ models/
 
 db/connectDb.js
 lib/rateLimit.js
-lib/nodemailer.js
 proxy.js
 next.config.mjs
 ```
