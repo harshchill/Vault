@@ -19,7 +19,10 @@ export default function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
       }
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target)
+      ) {
         setIsMobileMenuOpen(false);
       }
     };
@@ -44,33 +47,51 @@ export default function Navbar() {
           href="/"
           className="flex items-center gap-2 font-semibold text-lg"
         >
-          <Image src="/icon.png" alt="Vault" width={40} height={40} className="rounded-xl" />
+          <Image
+            src="/icon.png"
+            alt="Vault"
+            width={40}
+            height={40}
+            className="rounded-xl"
+          />
           <span className="hidden sm:inline">Vault</span>
         </Link>
-        
+
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700">
           {/* Admin button - only show if user is admin */}
           {status === "authenticated" && session?.user?.role === "admin" && (
-            <Link href="/admin" className="hover:text-emerald-600 transition-colors">
+            <Link
+              href="/admin"
+              className="hover:text-emerald-600 transition-colors"
+            >
               Admin
             </Link>
           )}
-          
-          <Link href="/user/papers" className="hover:text-emerald-600 transition-colors">
+
+          <Link
+            href="/user/papers"
+            className="hover:text-emerald-600 transition-colors"
+          >
             Papers
           </Link>
 
-          <Link href="/user/contributions" className="hover:text-emerald-600 transition-colors">
+          <Link
+            href="/user/contributions"
+            className="hover:text-emerald-600 transition-colors"
+          >
             Contributions
           </Link>
 
           {status === "authenticated" && (
-            <Link href="/user/upload" className="hover:text-emerald-600 transition-colors">
+            <Link
+              href="/user/upload"
+              className="hover:text-emerald-600 transition-colors"
+            >
               Upload
             </Link>
           )}
-          
+
           {/* Conditional rendering based on session */}
           {status === "loading" ? (
             <div className="text-slate-400">Loading...</div>
@@ -84,9 +105,9 @@ export default function Navbar() {
                   <FiUser size={16} />
                   {session.user.name || session.user.email?.split("@")[0]}
                 </span>
-                <FiChevronDown 
-                  size={16} 
-                  className={`transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                <FiChevronDown
+                  size={16}
+                  className={`transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
@@ -110,13 +131,22 @@ export default function Navbar() {
                     </div>
 
                     {/* Feature Links */}
-                    <Link href="/user/dashboard" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors">
+                    <Link
+                      href="/user/dashboard"
+                      className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                    >
                       Dashboard
                     </Link>
-                    <Link href="/user/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors">
+                    <Link
+                      href="/user/profile"
+                      className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                    >
                       Profile
                     </Link>
-                    <Link href="/user/saved" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors">
+                    <Link
+                      href="/user/saved"
+                      className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+                    >
                       Saved Papers
                     </Link>
 
@@ -125,9 +155,9 @@ export default function Navbar() {
                       onClick={handleSignOut}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors rounded-lg group"
                     >
-                      <FiLogOut 
-                        size={18} 
-                        className="group-hover:translate-x-0.5 transition-transform" 
+                      <FiLogOut
+                        size={18}
+                        className="group-hover:translate-x-0.5 transition-transform"
                       />
                       <span>Sign Out</span>
                     </button>
@@ -136,9 +166,9 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <Link 
+          <Link 
               href="/user/auth" 
-              className="hover:text-emerald-600 transition-colors"
+              className="w-32 h-8 py-3 rounded-full text-[#194b14] border-2 border-green-400 flex justify-center items-center "
             >
               Login / Signup
             </Link>
@@ -161,9 +191,9 @@ export default function Navbar() {
               {isMobileMenuOpen ? (
                 <FiX size={18} />
               ) : (
-                <FiChevronDown 
-                  size={18} 
-                  className={`transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`}
+                <FiChevronDown
+                  size={18}
+                  className={`transition-transform duration-200 ${isMobileMenuOpen ? "rotate-180" : ""}`}
                 />
               )}
             </button>
@@ -174,11 +204,7 @@ export default function Navbar() {
               className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors"
               aria-label="Menu"
             >
-              {isMobileMenuOpen ? (
-                <FiX size={24} />
-              ) : (
-                <FiMenu size={24} />
-              )}
+              {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
             </button>
           )}
 
@@ -188,16 +214,17 @@ export default function Navbar() {
               <div className="p-2">
                 {/* Navigation Links */}
                 <div className="space-y-1">
-                  {status === "authenticated" && session?.user?.role === "admin" && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors"
-                    >
-                      Admin
-                    </Link>
-                  )}
-                  
+                  {status === "authenticated" &&
+                    session?.user?.role === "admin" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg transition-colors"
+                      >
+                        Admin
+                      </Link>
+                    )}
+
                   <Link
                     href="/user/papers"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -273,9 +300,9 @@ export default function Navbar() {
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors rounded-lg group mt-2"
                     >
-                      <FiLogOut 
-                        size={18} 
-                        className="group-hover:translate-x-0.5 transition-transform" 
+                      <FiLogOut
+                        size={18}
+                        className="group-hover:translate-x-0.5 transition-transform"
                       />
                       <span>Sign Out</span>
                     </button>
@@ -300,4 +327,3 @@ export default function Navbar() {
     </header>
   );
 }
-
