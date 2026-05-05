@@ -49,6 +49,34 @@ export async function getUserDashboardStats(email) {
       .limit(5)
       .lean();
 
+    const leaderboardAgg = await Paper.aggregate([
+      { $match: { status: "approved", uploaderID: { $ne: null } } },
+      { $group: { _id: "$uploaderID", uploadCount: { $sum: 1 } } },
+      { $sort: { uploadCount: -1 } },
+    ]);
+
+    const leaderboardUserIds = leaderboardAgg.map((entry) => entry._id).filter(Boolean);
+    const leaderboardUsers = await User.find({ _id: { $in: leaderboardUserIds } })
+      .select("name specialization semester")
+      .lean();
+    const leaderboardUserMap = new Map(
+      leaderboardUsers.map((u) => [String(u._id), u])
+    );
+
+    const leaderboard = leaderboardAgg.map((entry, index) => {
+      const userId = String(entry._id);
+      const userInfo = leaderboardUserMap.get(userId) || {};
+      return {
+        rank: index + 1,
+        userId,
+        name: userInfo.name || "Unknown",
+        branch: userInfo.specialization || "Unknown",
+        semester: userInfo.semester || null,
+        uploadCount: entry.uploadCount,
+        isCurrentUser: String(user._id) === userId,
+      };
+    });
+
     return {
       success: true,
       stats: { totalUploaded, totalSaved },
@@ -70,6 +98,7 @@ export async function getUserDashboardStats(email) {
         program: p.program,
         year: p.year,
       })),
+      leaderboard,
     };
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
