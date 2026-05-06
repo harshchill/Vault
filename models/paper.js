@@ -20,6 +20,8 @@ const PaperSchema = new mongoose.Schema({
   isExtracted: { type: Boolean, default: false },
   storageFileName: { type: String, required: true, trim: true },
   storageURL: { type: String, required: true, trim: true },
+  isFileDeleted: { type: Boolean, default: false },
+  fileDeletedAt: { type: Date, default: null },
   unlockCounts: { type: Number, default: 0, min: 0 },
   saveCounts: { type: Number, default: 0, min: 0 },
   uploadedAt: { type: Date, default: Date.now },

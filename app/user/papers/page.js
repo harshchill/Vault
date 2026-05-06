@@ -45,6 +45,11 @@ const defaultFilters = {
   institute: "All institutes",
 };
 
+const withAllOption = (options, allLabel) => {
+  if (!Array.isArray(options) || options.length === 0) return [allLabel];
+  return options[0] === allLabel ? options : [allLabel, ...options];
+};
+
 export default function PapersPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -53,6 +58,14 @@ export default function PapersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState(defaultFilters);
+  const [filterOptions, setFilterOptions] = useState({
+    semesters,
+    years: ["All years"],
+    programs: ["All programs"],
+    specializations: ["All specializations"],
+    institutes: ["All institutes"],
+    programSpecializations: {},
+  });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -176,6 +189,41 @@ export default function PapersPage() {
   }, [filters, limit, offset]);
 
   useEffect(() => {
+    let mounted = true;
+
+    const fetchFilterOptions = async () => {
+      try {
+        const response = await fetch("/api/papers?distinct=filters");
+        const data = await response.json();
+
+        if (!mounted) return;
+
+        if (response.ok && data.success) {
+          setFilterOptions({
+            semesters: withAllOption(data.semesters, "All semesters"),
+            years: withAllOption(data.years, "All years"),
+            programs: withAllOption(data.programs, "All programs"),
+            specializations: withAllOption(
+              data.specializations,
+              "All specializations"
+            ),
+            institutes: withAllOption(data.institutes, "All institutes"),
+            programSpecializations: data.programSpecializations || {},
+          });
+        }
+      } catch (fetchErr) {
+        console.error("Error fetching filter options:", fetchErr);
+      }
+    };
+
+    fetchFilterOptions();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     setOffset(0);
   }, [filters]);
 
@@ -221,48 +269,54 @@ export default function PapersPage() {
 
   const current = useMemo(() => papers, [papers]);
 
-  const programOptions = useMemo(() => {
-    const set = new Set();
-    papers.forEach((paper) => {
-      if (paper.program) set.add(paper.program);
-    });
-    return ["All programs", ...Array.from(set).sort()];
-  }, [papers]);
+  const getSpecializationOptions = useCallback(
+    (programValue) => {
+      const baseOptions = withAllOption(
+        filterOptions.specializations,
+        "All specializations"
+      );
 
-  const specializationOptions = useMemo(() => {
-    const set = new Set();
-    const programFilter =
-      filters.program !== "All programs" ? filters.program : null;
-
-    papers.forEach((paper) => {
-      if (
-        programFilter &&
-        (paper.program || "").toLowerCase() !== programFilter.toLowerCase()
-      ) {
-        return;
+      if (!programValue || programValue === "All programs") {
+        return baseOptions;
       }
-      if (paper.specialization) set.add(paper.specialization);
-    });
 
-    return ["All specializations", ...Array.from(set).sort()];
-  }, [filters.program, papers]);
+      const programMap = filterOptions.programSpecializations || {};
+      const matchKey = Object.keys(programMap).find(
+        (key) => key.toLowerCase() === programValue.toLowerCase()
+      );
 
-  const yearOptions = useMemo(() => {
-    const set = new Set();
-    papers.forEach((paper) => {
-      if (paper.year) set.add(String(paper.year));
-    });
-    const sorted = Array.from(set).sort((a, b) => Number(b) - Number(a));
-    return ["All years", ...sorted];
-  }, [papers]);
+      if (!matchKey) return baseOptions;
 
-  const instituteOptions = useMemo(() => {
-    const set = new Set();
-    papers.forEach((paper) => {
-      if (paper.institute) set.add(paper.institute);
-    });
-    return ["All institutes", ...Array.from(set).sort()];
-  }, [papers]);
+      const scopedOptions = programMap[matchKey];
+      return withAllOption(scopedOptions, "All specializations");
+    },
+    [filterOptions.specializations, filterOptions.programSpecializations]
+  );
+
+  const semesterOptions = useMemo(
+    () => withAllOption(filterOptions.semesters, "All semesters"),
+    [filterOptions.semesters]
+  );
+
+  const programOptions = useMemo(
+    () => withAllOption(filterOptions.programs, "All programs"),
+    [filterOptions.programs]
+  );
+
+  const specializationOptions = useMemo(
+    () => getSpecializationOptions(filters.program),
+    [filters.program, getSpecializationOptions]
+  );
+
+  const yearOptions = useMemo(
+    () => withAllOption(filterOptions.years, "All years"),
+    [filterOptions.years]
+  );
+
+  const instituteOptions = useMemo(
+    () => withAllOption(filterOptions.institutes, "All institutes"),
+    [filterOptions.institutes]
+  );
 
   const handleViewPaper = (paperId) => {
     if (!paperId) return;
@@ -334,8 +388,28 @@ export default function PapersPage() {
       ...nextFilters,
     };
 
-    if (!specializationOptions.includes(sanitizedFilters.specialization)) {
+    if (!semesterOptions.includes(sanitizedFilters.semester)) {
+      sanitizedFilters.semester = "All semesters";
+    }
+
+    if (!programOptions.includes(sanitizedFilters.program)) {
+      sanitizedFilters.program = "All programs";
+    }
+
+    const nextSpecializationOptions = getSpecializationOptions(
+      sanitizedFilters.program
+    );
+
+    if (!nextSpecializationOptions.includes(sanitizedFilters.specialization)) {
       sanitizedFilters.specialization = "All specializations";
+    }
+
+    if (!yearOptions.includes(sanitizedFilters.year)) {
+      sanitizedFilters.year = "All years";
+    }
+
+    if (!instituteOptions.includes(sanitizedFilters.institute)) {
+      sanitizedFilters.institute = "All institutes";
     }
 
     setFilters(sanitizedFilters);
@@ -437,7 +511,7 @@ export default function PapersPage() {
                   filters={filters}
                   onApply={handleApplyFilters}
                   options={{
-                    semesters,
+                    semesters: semesterOptions,
                     specializations: specializationOptions,
                     programs: programOptions,
                     years: yearOptions,

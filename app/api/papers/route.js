@@ -17,6 +17,28 @@ const normalizeString = (value) =>
 const escapeRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const uniqueStrings = (values) => {
+  const map = new Map();
+  values.forEach((value) => {
+    const text = normalizeString(value);
+    if (!text) return;
+    const key = text.toLowerCase();
+    if (!map.has(key)) map.set(key, text);
+  });
+  return Array.from(map.values()).sort((a, b) =>
+    a.localeCompare(b, "en", { sensitivity: "base" })
+  );
+};
+
+const uniqueNumbers = (values) => {
+  const set = new Set();
+  values.forEach((value) => {
+    const num = Number(value);
+    if (Number.isFinite(num)) set.add(num);
+  });
+  return Array.from(set);
+};
+
 const toPaperResponse = (paperInput) => {
   const paper =
     typeof paperInput?.toObject === "function"
@@ -279,9 +301,88 @@ export async function GET(request) {
     const filter = { status: statusQuery };
 
     if (distinct) {
+      if (distinct === "filters") {
+        const [programsRaw, specializationsRaw, institutesRaw, yearsRaw, semestersRaw, programSpecPairs] =
+          await Promise.all([
+            Paper.distinct("program", filter),
+            Paper.distinct("specialization", filter),
+            Paper.distinct("institute", filter),
+            Paper.distinct("year", filter),
+            Paper.distinct("semester", filter),
+            Paper.aggregate([
+              { $match: filter },
+              {
+                $match: {
+                  program: { $type: "string", $ne: "" },
+                  specialization: { $type: "string", $ne: "" },
+                },
+              },
+              {
+                $group: {
+                  _id: {
+                    program: "$program",
+                    specialization: "$specialization",
+                  },
+                },
+              },
+            ]),
+          ]);
+
+        const programs = uniqueStrings(programsRaw);
+        const specializations = uniqueStrings(specializationsRaw);
+        const institutes = uniqueStrings(institutesRaw);
+        const years = uniqueNumbers(yearsRaw).sort((a, b) => b - a).map(String);
+        const semesters = uniqueNumbers(semestersRaw)
+          .sort((a, b) => a - b)
+          .map((num) => `Semester ${num}`);
+
+        const programSpecializations = {};
+        programSpecPairs.forEach((pair) => {
+          const program = normalizeString(pair?._id?.program);
+          const specialization = normalizeString(pair?._id?.specialization);
+          if (!program || !specialization) return;
+          const programKey = program.toLowerCase();
+
+          if (!programSpecializations[programKey]) {
+            programSpecializations[programKey] = {
+              program,
+              specializations: new Map(),
+            };
+          }
+
+          const entry = programSpecializations[programKey];
+          const specKey = specialization.toLowerCase();
+          if (!entry.specializations.has(specKey)) {
+            entry.specializations.set(specKey, specialization);
+          }
+        });
+
+        const programSpecializationsPayload = Object.values(programSpecializations)
+          .sort((a, b) => a.program.localeCompare(b.program, "en", { sensitivity: "base" }))
+          .reduce((acc, entry) => {
+            acc[entry.program] = Array.from(entry.specializations.values()).sort((a, b) =>
+              a.localeCompare(b, "en", { sensitivity: "base" })
+            );
+            return acc;
+          }, {});
+
+        return NextResponse.json(
+          {
+            success: true,
+            programs: ["All programs", ...programs],
+            specializations: ["All specializations", ...specializations],
+            institutes: ["All institutes", ...institutes],
+            years: ["All years", ...years],
+            semesters: ["All semesters", ...semesters],
+            programSpecializations: programSpecializationsPayload,
+          },
+          { status: 200 }
+        );
+      }
+
       if (distinct !== "institute") {
         return NextResponse.json(
-          { error: "Invalid distinct field. Use distinct=institute." },
+          { error: "Invalid distinct field. Use distinct=institute or distinct=filters." },
           { status: 400 }
         );
       }

@@ -5,6 +5,7 @@ import { User } from "@/models/user";
 import Paper from "@/models/paper";
 import { getServerSession } from "next-auth";
 import { authoptions } from "@/app/api/auth/[...nextauth]/route";
+import { deleteSupabaseFile } from "@/lib/supabaseAdmin";
 
 /**
  * Validates if the current user is an admin.
@@ -211,8 +212,17 @@ export async function deletePaper(paperId) {
   await requireAdmin();
   await connectDB();
 
-  const deleted = await Paper.findByIdAndDelete(paperId);
-  if (!deleted) throw new Error("Paper not found");
+  const paper = await Paper.findById(paperId).lean();
+  if (!paper) throw new Error("Paper not found");
+
+  if (paper.storageFileName) {
+    const fileDelete = await deleteSupabaseFile(paper.storageFileName);
+    if (!fileDelete.success) {
+      throw new Error(fileDelete.error || "Failed to delete paper file.");
+    }
+  }
+
+  await Paper.findByIdAndDelete(paperId);
 
   return { success: true };
 }
@@ -260,11 +270,27 @@ export async function approveRejectPaper(paperId, status) {
     throw new Error("Invalid status");
   }
 
-  const updatedPaper = await Paper.findByIdAndUpdate(
-    paperId,
-    { status },
-    { new: true }
-  ).lean();
+  const paper = await Paper.findById(paperId).lean();
+  if (!paper) throw new Error("Paper not found");
+
+  const update = { status };
+
+  if (status === "rejected") {
+    if (paper.storageFileName && !paper.isFileDeleted) {
+      const fileDelete = await deleteSupabaseFile(paper.storageFileName);
+      if (!fileDelete.success) {
+        throw new Error(fileDelete.error || "Failed to delete paper file.");
+      }
+      update.isFileDeleted = true;
+      update.fileDeletedAt = new Date();
+    } else if (paper.isFileDeleted && !paper.fileDeletedAt) {
+      update.fileDeletedAt = new Date();
+    }
+  }
+
+  const updatedPaper = await Paper.findByIdAndUpdate(paperId, update, {
+    new: true,
+  }).lean();
 
   if (!updatedPaper) throw new Error("Paper not found");
 
