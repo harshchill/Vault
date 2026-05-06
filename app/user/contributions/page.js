@@ -40,7 +40,7 @@ export default function ContributionsPage() {
   if (top3[2]) podiumOrder.push(top3[2]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background px-4 pb-24 pt-12 sm:px-6 lg:px-8">
+    <div className="relative min-h-screen overflow-hidden bg-background px-4 pb-10 pt-12 sm:px-6 lg:px-8">
       <div className="absolute top-0 right-[20%] -z-10 h-125 w-125 rounded-full bg-teal-400/10 blur-3xl" />
       <div className="absolute bottom-0 left-[10%] -z-10 h-100 w-100 rounded-full bg-emerald-400/10 blur-3xl" />
 

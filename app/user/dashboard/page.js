@@ -10,7 +10,6 @@ import {
   FiTrendingUp,
   FiHeart,
   FiSearch,
-  FiHome,
 } from "react-icons/fi"
 import { getUserDashboardStats } from "@/app/actions/userActions"
 import { LeaderboardBars } from "./_components/LeaderboardBars"
@@ -453,35 +452,6 @@ function CommunityLibrary({ papers }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-function MobileQuickNav() {
-  const items = [
-    { href: "/user/dashboard", label: "Home", icon: <FiHome size={17} /> },
-    { href: "/user/upload", label: "Upload", icon: <FiUpload size={17} /> },
-    { href: "/user/papers", label: "Papers", icon: <FiFileText size={17} /> },
-    { href: "/user/saved", label: "Saved", icon: <FiBookmark size={17} /> },
-  ]
-
-  return (
-    <nav
-      aria-label="Dashboard quick navigation"
-      className="md:hidden fixed left-3 right-3 bottom-3 z-40 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-xl shadow-xl shadow-slate-900/10"
-    >
-      <div className="grid grid-cols-4">
-        {items.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-500 transition-colors hover:text-teal-600 focus:text-teal-600"
-          >
-            <span className={item.label === "Upload" ? "text-teal-600" : ""}>{item.icon}</span>
-            <span>{item.label}</span>
-          </Link>
-        ))}
-      </div>
-    </nav>
-  )
-}
-
 export default async function DashboardPage() {
   const session = await getServerSession()
   if (!session?.user) redirect("/user/auth")
@@ -501,7 +471,7 @@ export default async function DashboardPage() {
   const currentUserRank = leaderboard?.find((e) => e.isCurrentUser)?.rank ?? null
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-24 md:pb-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-10">
 
       {/* Header */}
       <div className="mb-6 sm:mb-8 animate-fade-in">
@@ -569,7 +539,6 @@ export default async function DashboardPage() {
       <LeaderboardSection leaderboard={leaderboard ?? []} currentUserRank={currentUserRank} />
       <PapersForYou papers={papersForYou ?? []} userSemester={user?.semester} userBranch={user?.branch} />
       <CommunityLibrary papers={recentPapers ?? []} />
-      <MobileQuickNav />
     </div>
   )
 }

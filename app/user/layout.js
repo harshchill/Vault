@@ -1,3 +1,5 @@
+import UserLayoutShell from "./UserLayoutShell";
+
 export const metadata = {
   title: "User Area",
   description:
@@ -15,5 +17,5 @@ export const metadata = {
 };
 
 export default function UserLayout({ children }) {
-  return children;
+  return <UserLayoutShell>{children}</UserLayoutShell>;
 }

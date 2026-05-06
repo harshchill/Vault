@@ -186,8 +186,24 @@ export default function Navbar() {
           {isMobileMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="p-2">
+                {status === "authenticated" && session && (
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {session.user.name || "User"}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate">
+                      {session.user.email}
+                    </p>
+                    {session.user.role === "admin" && (
+                      <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-100 text-emerald-700">
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Navigation Links */}
-                <div className="space-y-1">
+                <div className="mt-2 space-y-1">
                   {status === "authenticated" && session?.user?.role === "admin" && (
                     <Link
                       href="/admin"
@@ -225,28 +241,12 @@ export default function Navbar() {
                   )}
                 </div>
 
-                {/* User Info (if authenticated) */}
                 {status === "authenticated" && session && (
                   <>
-                    <div className="px-4 py-3 border-t border-slate-100 mt-2">
-                      <p className="text-sm font-semibold text-slate-900">
-                        {session.user.name || "User"}
-                      </p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {session.user.email}
-                      </p>
-                      {session.user.role === "admin" && (
-                        <span className="inline-block mt-2 px-2 py-0.5 text-xs font-medium rounded-md bg-emerald-100 text-emerald-700">
-                          Admin
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Feature Links */}
                     <Link
                       href="/user/dashboard"
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors mt-2"
+                      className="mt-2 block px-4 py-3 text-sm font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors"
                     >
                       Dashboard
                     </Link>
@@ -265,13 +265,12 @@ export default function Navbar() {
                       Saved Papers
                     </Link>
 
-                    {/* Sign Out Button */}
                     <button
                       onClick={() => {
                         setIsMobileMenuOpen(false);
                         handleSignOut();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors rounded-lg group mt-2"
+                      className="mt-2 w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors rounded-lg group"
                     >
                       <FiLogOut 
                         size={18} 

@@ -1,13 +1,96 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { FiSave, FiUser, FiBook, FiAward, FiCheckCircle } from "react-icons/fi";
+import {
+  FiSave,
+  FiUser,
+  FiBook,
+  FiAward,
+  FiCheckCircle,
+  FiMapPin,
+} from "react-icons/fi";
 import { updateUserProfile } from "@/app/actions/userActions";
+import { UNIVERSITY_COURSES } from "@/lib/universityCourses";
 
 export default function ProfileForm({ user }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+  const [instituteOptions, setInstituteOptions] = useState([]);
+
+  const programOptions = useMemo(
+    () => Object.keys(UNIVERSITY_COURSES).sort((a, b) => a.localeCompare(b)),
+    []
+  );
+
+  const hasProgram = Boolean(user.program && user.program.trim());
+  const initialProgram = hasProgram
+    ? programOptions.includes(user.program)
+      ? user.program
+      : "Other"
+    : "";
+  const initialCustomProgram = hasProgram && !programOptions.includes(user.program)
+    ? user.program
+    : "";
+  const initialSpecializationOptions = initialProgram
+    ? UNIVERSITY_COURSES[initialProgram] || []
+    : [];
+  const initialSpecialization = initialProgram
+    ? initialSpecializationOptions.includes(user.specialization)
+      ? user.specialization
+      : user.specialization
+        ? "Other"
+        : ""
+    : "";
+  const initialCustomSpecialization = initialProgram
+    ? initialSpecializationOptions.includes(user.specialization)
+      ? ""
+      : user.specialization || ""
+    : "";
+
+  const [program, setProgram] = useState(initialProgram);
+  const [customProgram, setCustomProgram] = useState(initialCustomProgram);
+  const [specialization, setSpecialization] = useState(initialSpecialization);
+  const [customSpecialization, setCustomSpecialization] = useState(
+    initialCustomSpecialization
+  );
+  const [institute, setInstitute] = useState(user.university || "");
+
+  const specializationOptions = useMemo(() => {
+    if (!program) return [];
+    const options = UNIVERSITY_COURSES[program] || [];
+    return options.length ? [...options, "Other"] : ["Other"];
+  }, [program]);
+
+  const handleProgramChange = (event) => {
+    const nextProgram = event.target.value;
+    setProgram(nextProgram);
+    setSpecialization(nextProgram === "Other" ? "Other" : "");
+    setCustomSpecialization("");
+  };
+
+  useEffect(() => {
+    const fetchInstitutes = async () => {
+      try {
+        const response = await fetch("/api/papers?distinct=institute");
+        const data = await response.json();
+        if (response.ok && data.success && Array.isArray(data.institutes)) {
+          setInstituteOptions(data.institutes);
+        }
+      } catch (error) {
+        console.error("Failed to fetch institute options:", error);
+      }
+    };
+
+    fetchInstitutes();
+  }, []);
+
+  const resolvedProgram =
+    program === "Other" ? customProgram.trim() : program || "";
+  const resolvedSpecialization =
+    specialization === "Other"
+      ? customSpecialization.trim()
+      : specialization || "";
 
   async function handleAction(formData) {
     setLoading(true);
@@ -50,41 +133,88 @@ export default function ProfileForm({ user }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-              <FiUser className="text-teal-500" /> University
+              <FiMapPin className="text-teal-500" /> Institute
             </label>
-            <input 
-              name="university" 
-              defaultValue={user.university} 
-              placeholder="e.g. MIT, Stanford"
+            <input
+              name="university"
+              value={institute}
+              onChange={(event) => setInstitute(event.target.value)}
+              placeholder="e.g. AKS University"
+              list="profile-institutes"
               suppressHydrationWarning
               className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm"
             />
+            <datalist id="profile-institutes">
+              {instituteOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
           </div>
           
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <FiAward className="text-teal-500" /> Program
             </label>
-            <input 
-              name="program" 
-              defaultValue={user.program}
-              placeholder="e.g. B.Tech, BSc"
+            <select
+              value={program}
+              onChange={handleProgramChange}
               suppressHydrationWarning
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm"
-            />
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm appearance-none"
+            >
+              <option value="" disabled>
+                Select program
+              </option>
+              {programOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+              <option value="Other">Other</option>
+            </select>
+            {program === "Other" ? (
+              <input
+                name="customProgram"
+                value={customProgram}
+                onChange={(event) => setCustomProgram(event.target.value)}
+                placeholder="Enter your program"
+                required
+                suppressHydrationWarning
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm"
+              />
+            ) : null}
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <FiBook className="text-teal-500" /> Specialization
             </label>
-            <input 
-              name="specialization" 
-              defaultValue={user.specialization}
-              placeholder="e.g. Computer Science"
+            <select
+              value={specialization}
+              onChange={(event) => setSpecialization(event.target.value)}
+              disabled={!program}
               suppressHydrationWarning
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm"
-            />
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm appearance-none"
+            >
+              <option value="" disabled>
+                {program ? "Select specialization" : "Select program first"}
+              </option>
+              {specializationOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            {specialization === "Other" ? (
+              <input
+                name="customSpecialization"
+                value={customSpecialization}
+                onChange={(event) => setCustomSpecialization(event.target.value)}
+                placeholder="Enter your specialization"
+                required
+                suppressHydrationWarning
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm"
+              />
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -117,6 +247,13 @@ export default function ProfileForm({ user }) {
             />
           </div>
         </div>
+
+        <input type="hidden" name="program" value={resolvedProgram} />
+        <input
+          type="hidden"
+          name="specialization"
+          value={resolvedSpecialization}
+        />
 
         <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
           <button 
