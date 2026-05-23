@@ -19,6 +19,7 @@ import {
 } from "react-icons/fi";
 import LoginRequiredModal from "../../component/LoginRequiredModal";
 import PaperFiltersModal from "../../component/PaperFiltersModal";
+import RequestPaperModal from "../../component/RequestPaperModal";
 import {
   getSavedPaperIds,
   savePaperForUser,
@@ -78,6 +79,7 @@ export default function PapersPage() {
   const [hasMore, setHasMore] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
   const [savedPaperIds, setSavedPaperIds] = useState(new Set());
   const [saveLoadingIds, setSaveLoadingIds] = useState(new Set());
 
@@ -427,6 +429,14 @@ export default function PapersPage() {
     filters.institute,
   ].filter((value, index) => value !== Object.values(defaultFilters)[index]);
 
+  const shouldShowRequestBanner =
+    !loading &&
+    !error &&
+    ((searchQuery.trim().length >= 2 &&
+      !searchLoading &&
+      searchResults.length < 3) ||
+      (activeFilterCount > 0 && current.length < 3));
+
   return (
     <>
       <LoginRequiredModal
@@ -434,6 +444,14 @@ export default function PapersPage() {
         onClose={() => setShowLoginModal(false)}
         callbackUrl="/user/papers"
       />
+
+      {showRequestModal ? (
+        <RequestPaperModal
+          isOpen={showRequestModal}
+          onClose={() => setShowRequestModal(false)}
+          initialSubject={searchQuery.trim()}
+        />
+      ) : null}
 
       <div className="mx-auto max-w-6xl space-y-10 px-4 py-14">
         <div className="space-y-6">
@@ -521,6 +539,29 @@ export default function PapersPage() {
               ) : null}
             </div>
           </div>
+
+          {shouldShowRequestBanner ? (
+            <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm font-medium text-emerald-900">
+                Can&apos;t find what you&apos;re looking for?{" "}
+                <span className="font-semibold text-emerald-700">Request it</span> → it only takes{" "}
+                <span className="font-semibold text-emerald-700">a minute</span>.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (status === "authenticated") {
+                    setShowRequestModal(true);
+                  } else {
+                    setShowLoginModal(true);
+                  }
+                }}
+                className="button button-primary w-full md:w-auto"
+              >
+                Request paper
+              </button>
+            </div>
+          ) : null}
 
           {filterSummary.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
