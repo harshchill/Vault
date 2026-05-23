@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { FiUpload, FiFileText } from 'react-icons/fi';
 import { UNIVERSITY_COURSES } from "@/lib/universityCourses";
+import RequestQueuePanel from "./_components/RequestQueuePanel";
+import UserUploadsPanel from "./_components/UserUploadsPanel";
 
 export default function UploadPage() {
   const { data: session, status } = useSession();
@@ -216,9 +218,17 @@ export default function UploadPage() {
 
       <div className="max-w-3xl mx-auto relative z-10 animate-fade-in">
         <div className="mb-10 text-center">
-          <span className="pill mb-4 border border-teal-200 text-teal-700 font-black"><FiUpload /> Contribution Zone</span>
           <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 tracking-tight mb-2">Drop a Paper</h1>
           <p className="text-slate-500 text-lg">Leave a legacy. Submit past year papers for the community.</p>
+        </div>
+
+        <div className="mb-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="#upload-status" className="button button-primary w-full sm:w-auto">
+            Track your papers
+          </a>
+          <a href="#request-queue" className="button button-ghost w-full sm:w-auto">
+            Upload what students want
+          </a>
         </div>
 
         <div className="glass-panel p-8 sm:p-10 shadow-2xl shadow-teal-500/10 border-t-4 border-t-teal-500 rounded-3xl relative overflow-hidden bg-white/80 backdrop-blur-3xl">
@@ -427,6 +437,14 @@ export default function UploadPage() {
               Submissions require admin approval before listing.
             </p>
           </form>
+        </div>
+        <div className="mt-12 grid gap-6 lg:grid-cols-2">
+          <div id="request-queue" className="scroll-mt-28">
+            <RequestQueuePanel />
+          </div>
+          <div id="upload-status" className="scroll-mt-28">
+            <UserUploadsPanel />
+          </div>
         </div>
       </div>
     </div>

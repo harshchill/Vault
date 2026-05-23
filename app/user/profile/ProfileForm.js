@@ -55,6 +55,7 @@ export default function ProfileForm({ user }) {
     initialCustomSpecialization
   );
   const [institute, setInstitute] = useState(user.university || "");
+  const [name, setName] = useState(user.name || "");
 
   const specializationOptions = useMemo(() => {
     if (!program) return [];
@@ -131,6 +132,19 @@ export default function ProfileForm({ user }) {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <FiUser className="text-teal-500" /> Name
+            </label>
+            <input
+              name="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="e.g. Aashu Kumar"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition-all shadow-sm"
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
               <FiMapPin className="text-teal-500" /> Institute

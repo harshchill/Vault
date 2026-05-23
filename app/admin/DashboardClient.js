@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, FileText, Upload, CheckCircle, TrendingUp, Clock, AlertCircle } from "lucide-react";
+import { Users, FileText, Upload, CheckCircle, TrendingUp, Clock, AlertCircle, Bookmark } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -18,7 +18,7 @@ export default function DashboardClient({ initialData }) {
       </div>
 
       {/* Top Stats - Bento Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard 
           title="Total Users" 
           value={data.totalUsers} 
@@ -44,10 +44,16 @@ export default function DashboardClient({ initialData }) {
           trend={data.pendingPapersCount > 0 ? "Requires attention" : "All caught up"}
           highlight={data.pendingPapersCount > 0}
         />
+        <StatCard 
+          title="Total Requests" 
+          value={data.totalRequests} 
+          icon={<AlertCircle className="text-rose-500" size={24} />} 
+          trend="Open demand signals"
+        />
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upload Trends */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]">
           <div className="flex items-center gap-2 mb-6">
@@ -83,6 +89,71 @@ export default function DashboardClient({ initialData }) {
           </div>
         </div>
 
+        {/* User Trends */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="p-2 bg-emerald-50 rounded-lg">
+              <Users size={20} className="text-emerald-600" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">User Trends</h3>
+          </div>
+          <div className="h-[300px] w-full">
+            {data.userTrends && data.userTrends.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data.userTrends}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} dx={-10} />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px -10px rgba(0,0,0,0.1)' }}
+                    cursor={{ stroke: '#f0f0f0', strokeWidth: 2 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="#16a34a" 
+                    strokeWidth={3}
+                    dot={{ fill: '#16a34a', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">Not enough data to show trends.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Most Saved Paper */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] flex flex-col">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="p-2 bg-rose-50 rounded-lg">
+              <Bookmark size={20} className="text-rose-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Most Saved Paper</h3>
+          </div>
+          {data.mostSavedPaper ? (
+            <div className="flex-1 flex flex-col justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Top pick by students</p>
+                <h4 className="mt-2 text-xl font-bold text-gray-900 line-clamp-2">
+                  {data.mostSavedPaper.subject}
+                </h4>
+                <p className="mt-2 text-sm text-gray-600">
+                  {data.mostSavedPaper.program} • Sem {data.mostSavedPaper.semester} • {data.mostSavedPaper.year}
+                </p>
+              </div>
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 w-fit">
+                {data.mostSavedPaper.saveCounts} saves
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-400">No saved paper data yet.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Universities */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]">
           <div className="flex items-center gap-2 mb-6">
@@ -107,6 +178,34 @@ export default function DashboardClient({ initialData }) {
               </ResponsiveContainer>
             ) : (
                <div className="h-full flex items-center justify-center text-gray-400">Not enough data to show top universities.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Branch Uploads */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)]">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="p-2 bg-amber-50 rounded-lg">
+              <FileText size={20} className="text-amber-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Branch Uploads</h3>
+          </div>
+          <div className="h-[300px] w-full">
+            {data.branchUploads && data.branchUploads.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.branchUploads} layout="vertical" margin={{ top: 0, right: 0, left: 40, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} />
+                  <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#444', fontSize: 12, fontWeight: 500}} width={140} />
+                  <RechartsTooltip 
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px -10px rgba(0,0,0,0.1)' }}
+                    cursor={{ fill: '#f8fafc' }}
+                  />
+                  <Bar dataKey="count" fill="#f59e0b" radius={[0, 6, 6, 0]} barSize={22} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">Not enough data to show branches.</div>
             )}
           </div>
         </div>

@@ -346,6 +346,8 @@ function LeaderboardSection({ leaderboard, currentUserRank }) {
         icon={<FiTrendingUp className="text-teal-500" />}
         title="Top contributors"
         subtitle={formatCurrentMonthYear()}
+        href="/user/contributions"
+        linkLabel="View all"
       />
       <div className="bg-white rounded-2xl border border-slate-200/60 overflow-hidden">
         {leaderboard.length === 0 ? (
@@ -425,30 +427,6 @@ function PapersForYou({ papers, userSemester, userBranch }) {
   )
 }
 
-function CommunityLibrary({ papers }) {
-  return (
-    <div className="mt-10 animate-fade-in [animation-delay:400ms]">
-      <SectionHeader
-        icon={<FiAward className="text-teal-500" />}
-        title="Community Library"
-        href="/user/papers"
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {papers.length === 0 ? (
-          <EmptyState
-            icon={<FiUpload size={22} />}
-            title="No papers available yet"
-            description="Share your old papers and help fellow students find useful material."
-            actionLabel="Upload your first paper"
-            actionHref="/user/upload"
-          />
-        ) : (
-          papers.map((paper) => <PaperCard key={paper.id} paper={paper} showYear showAccent={false} />)
-        )}
-      </div>
-    </div>
-  )
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -469,6 +447,7 @@ export default async function DashboardPage() {
 
   const firstName = session.user.name?.split(" ")[0] ?? "Scholar"
   const currentUserRank = leaderboard?.find((e) => e.isCurrentUser)?.rank ?? null
+  const limitedLeaderboard = (leaderboard ?? []).slice(0, 5)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-10">
@@ -483,6 +462,8 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-slate-500 mt-2 text-base sm:text-lg">Here&apos;s a glimpse of your academic journey.</p>
       </div>
+
+     
 
       {/* Profile completion banner */}
       {!user?.isProfileComplete && (
@@ -536,9 +517,34 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <LeaderboardSection leaderboard={leaderboard ?? []} currentUserRank={currentUserRank} />
-      <PapersForYou papers={papersForYou ?? []} userSemester={user?.semester} userBranch={user?.branch} />
-      <CommunityLibrary papers={recentPapers ?? []} />
+      <div className="my-4 animate-fade-in [animation-delay:60ms]">
+        <div className="rounded-2xl border border-teal-100 bg-gradient-to-r from-teal-50/80 via-white to-emerald-50/70 px-4 py-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Quick actions for contributors</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Track approvals and help students by uploading the most requested papers.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Link
+              href="/user/upload#upload-status"
+              className="button button-primary"
+            >
+              Track your papers
+            </Link>
+            <Link
+              href="/user/upload#request-queue"
+              className="button button-ghost"
+            >
+              See what students want
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <LeaderboardSection leaderboard={limitedLeaderboard} currentUserRank={currentUserRank} />
+      <PapersForYou papers={papersForYou ?? []} userSemester={user?.semester} userBranch={user?.specialization} />
+      
     </div>
   )
 }

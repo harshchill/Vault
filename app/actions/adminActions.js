@@ -3,6 +3,7 @@
 import connectDB from "@/db/connectDb";
 import { User } from "@/models/user";
 import Paper from "@/models/paper";
+import Request from "@/models/request";
 import { getServerSession } from "next-auth";
 import { authoptions } from "@/app/api/auth/[...nextauth]/route";
 import { deleteSupabaseFile } from "@/lib/supabaseAdmin";
@@ -31,6 +32,7 @@ export async function getAdminStats() {
   const totalPapers = await Paper.countDocuments({ status: "approved" });
   const pendingPapersCount = await Paper.countDocuments({ status: "pending" });
   const totalUploads = await Paper.countDocuments();
+  const totalRequests = await Request.countDocuments();
 
   const topUniversitiesResult = await Paper.aggregate([
     { $match: { status: "approved" } },
@@ -68,6 +70,42 @@ export async function getAdminStats() {
     count: item.count,
   }));
 
+  const userTrendsResult = await User.aggregate([
+    { $match: { createdAt: { $gte: sixMonthsAgo } } },
+    {
+      $group: {
+        _id: {
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { "_id.year": 1, "_id.month": 1 } },
+  ]);
+
+  const userTrends = userTrendsResult.map(item => ({
+    month: `${monthNames[item._id.month - 1]} ${item._id.year.toString().slice(2)}`,
+    count: item.count,
+  }));
+
+  const mostSavedPaper = await Paper.findOne({ status: "approved", saveCounts: { $gt: 0 } })
+    .sort({ saveCounts: -1 })
+    .select("subject program specialization semester year saveCounts")
+    .lean();
+
+  const branchUploadsResult = await Paper.aggregate([
+    { $match: { status: "approved", specialization: { $ne: null } } },
+    { $group: { _id: "$specialization", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 8 },
+  ]);
+
+  const branchUploads = branchUploadsResult.map(item => ({
+    name: item._id,
+    count: item.count,
+  }));
+
   const recentPending = await Paper.find({ status: "pending" })
     .sort({ uploadedAt: -1 })
     .limit(5)
@@ -79,8 +117,12 @@ export async function getAdminStats() {
     totalPapers,
     pendingPapersCount,
     totalUploads,
+    totalRequests,
     topUniversities,
     uploadTrends,
+    userTrends,
+    mostSavedPaper,
+    branchUploads,
     recentPending,
   });
 }
@@ -257,6 +299,76 @@ export async function getApprovedPapersForMatching() {
     .lean();
 
   return serializeDoc(papers);
+}
+
+/**
+ * GET Open Requests
+ */
+export async function getOpenRequests() {
+  await requireAdmin();
+  await connectDB();
+
+  const requests = await Request.find({ status: "open" })
+    .populate("requesterId", "name email")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return serializeDoc(requests);
+}
+
+/**
+ * GET All Requests for Matching
+ */
+export async function getRequestsForMatching() {
+  await requireAdmin();
+  await connectDB();
+
+  const requests = await Request.find({})
+    .select(
+      "subject institute program specialization semester year status requesterEmail requesterId createdAt"
+    )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return serializeDoc(requests);
+}
+
+/**
+ * UPDATE Request Status
+ */
+export async function updateRequestStatus(requestId, status) {
+  await requireAdmin();
+  await connectDB();
+
+  const allowedStatuses = new Set(["open", "fulfilled", "rejected"]);
+  if (!allowedStatuses.has(status)) {
+    throw new Error("Invalid request status");
+  }
+
+  const updated = await Request.findByIdAndUpdate(
+    requestId,
+    { status },
+    { new: true }
+  )
+    .populate("requesterId", "name email")
+    .lean();
+
+  if (!updated) throw new Error("Request not found");
+
+  return serializeDoc(updated);
+}
+
+/**
+ * DELETE Request
+ */
+export async function deleteRequest(requestId) {
+  await requireAdmin();
+  await connectDB();
+
+  const deleted = await Request.findByIdAndDelete(requestId);
+  if (!deleted) throw new Error("Request not found");
+
+  return { success: true };
 }
 
 /**

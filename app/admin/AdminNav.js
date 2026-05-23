@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileText, CheckCircle, ArrowLeft, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, FileText, CheckCircle, ArrowLeft, Menu, X, Inbox } from "lucide-react";
 import { useState } from "react";
 
 export default function AdminNav() {
@@ -14,6 +14,7 @@ export default function AdminNav() {
     { name: "Users", href: "/admin/users", icon: Users },
     { name: "Papers", href: "/admin/papers", icon: FileText },
     { name: "Approvals", href: "/admin/approvals", icon: CheckCircle },
+    { name: "Requests", href: "/admin/requests", icon: Inbox },
   ];
 
   const closeMenu = () => setMobileMenuOpen(false);

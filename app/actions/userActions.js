@@ -3,12 +3,15 @@
 import connectDB from "@/db/connectDb";
 import { User } from "@/models/user";
 import Paper from "@/models/paper";
+import Request from "@/models/request";
 import SavedPaper from "@/models/savedPaper";
 import { getServerSession } from "next-auth/next";
 import { isValidObjectId } from "mongoose";
 
 const normalizeEmail = (email) =>
   typeof email === "string" ? email.trim().toLowerCase() : "";
+
+const serializeDoc = (doc) => JSON.parse(JSON.stringify(doc));
 
 async function resolveActingEmail(email) {
   const session = await getServerSession();
@@ -48,6 +51,25 @@ export async function getUserDashboardStats(email) {
       .sort({ uploadedAt: -1 })
       .limit(5)
       .lean();
+
+    const papersForYouQuery = {
+      status: "approved",
+    };
+
+    if (user.specialization?.trim()) {
+      papersForYouQuery.specialization = user.specialization;
+    }
+
+    if (user.semester) {
+      papersForYouQuery.semester = user.semester;
+    }
+
+    const papersForYou = user.specialization && user.semester
+      ? await Paper.find(papersForYouQuery)
+          .sort({ uploadedAt: -1 })
+          .limit(5)
+          .lean()
+      : [];
 
     const leaderboardAgg = await Paper.aggregate([
       { $match: { status: "approved", uploaderID: { $ne: null } } },
@@ -98,6 +120,14 @@ export async function getUserDashboardStats(email) {
         program: p.program,
         year: p.year,
       })),
+      papersForYou: papersForYou.map((p) => ({
+        id: p._id.toString(),
+        subject: p.subject,
+        semester: p.semester,
+        program: p.program,
+        year: p.year,
+        saveCount: p.saveCounts || 0,
+      })),
       leaderboard,
     };
   } catch (error) {
@@ -137,10 +167,15 @@ export async function updateUserProfile(email, formData) {
     await connectDB();
     
     const updateData = {
+      name: formData.get("name"),
       university: formData.get("university"),
       program: formData.get("program"),
       specialization: formData.get("specialization"),
     };
+
+    if (typeof updateData.name === "string") {
+      updateData.name = updateData.name.trim();
+    }
     
     // Add image URL if provided
     const imgUrl = formData.get("image");
@@ -269,6 +304,142 @@ export async function unsavePaperForUser(email, paperId) {
   } catch (error) {
     console.error("Error removing saved paper:", error);
     return { success: false, error: "Failed to remove saved paper" };
+  }
+}
+
+export async function createPaperRequest(payload) {
+  try {
+    const session = await getServerSession();
+    const sessionEmail = normalizeEmail(session?.user?.email);
+
+    if (!sessionEmail) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    await connectDB();
+
+    const requester = await User.findOne({ email: sessionEmail })
+      .select("_id email")
+      .lean();
+
+    if (!requester) {
+      return { success: false, error: "User not found" };
+    }
+
+    const institute = typeof payload?.institute === "string" ? payload.institute.trim() : "";
+    const subject = typeof payload?.subject === "string" ? payload.subject.trim() : "";
+    const program = typeof payload?.program === "string" ? payload.program.trim() : "";
+    const specialization =
+      typeof payload?.specialization === "string" ? payload.specialization.trim() : "";
+    const semesterNum = Number(payload?.semester);
+    const yearNum = Number(payload?.year);
+
+    if (!institute || !subject || !program || !specialization) {
+      return { success: false, error: "All fields are required" };
+    }
+
+    if (!Number.isInteger(semesterNum) || semesterNum < 1 || semesterNum > 8) {
+      return { success: false, error: "Semester must be between 1 and 8" };
+    }
+
+    if (!Number.isInteger(yearNum) || yearNum < 2000 || yearNum > 2100) {
+      return { success: false, error: "Year must be between 2000 and 2100" };
+    }
+
+    const request = await Request.create({
+      requesterId: requester._id,
+      requesterEmail: requester.email,
+      institute,
+      subject,
+      program,
+      specialization,
+      semester: semesterNum,
+      year: yearNum,
+      status: "open",
+    });
+
+    return { success: true, request: serializeDoc(request) };
+  } catch (error) {
+    console.error("Error creating request:", error);
+    return { success: false, error: "Failed to submit request" };
+  }
+}
+
+export async function getOpenRequestsForUpload(page = 1, limit = 6) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    await connectDB();
+
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 6;
+    const skip = (safePage - 1) * safeLimit;
+
+    const [total, requests] = await Promise.all([
+      Request.countDocuments({ status: "open" }),
+      Request.find({ status: "open" })
+        .select("subject semester year program institute createdAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(safeLimit)
+        .lean(),
+    ]);
+
+    return {
+      success: true,
+      requests: serializeDoc(requests),
+      total,
+      page: safePage,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    };
+  } catch (error) {
+    console.error("Error fetching open requests:", error);
+    return { success: false, error: "Failed to fetch requests" };
+  }
+}
+
+export async function getUserUploadsWithStatus(page = 1, limit = 6) {
+  try {
+    const session = await getServerSession();
+    const email = normalizeEmail(session?.user?.email);
+    if (!email) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    await connectDB();
+
+    const user = await User.findOne({ email }).select("_id").lean();
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 6;
+    const skip = (safePage - 1) * safeLimit;
+
+    const [total, uploads] = await Promise.all([
+      Paper.countDocuments({ uploaderID: user._id }),
+      Paper.find({ uploaderID: user._id })
+        .select("subject semester year program institute status uploadedAt")
+        .sort({ uploadedAt: -1 })
+        .skip(skip)
+        .limit(safeLimit)
+        .lean(),
+    ]);
+
+    return {
+      success: true,
+      uploads: serializeDoc(uploads),
+      total,
+      page: safePage,
+      totalPages: Math.max(1, Math.ceil(total / safeLimit)),
+    };
+  } catch (error) {
+    console.error("Error fetching user uploads:", error);
+    return { success: false, error: "Failed to fetch uploads" };
   }
 }
 
