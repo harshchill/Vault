@@ -365,6 +365,74 @@ export async function createPaperRequest(payload) {
   }
 }
 
+export async function toggleRequestVote(requestId) {
+  try {
+    if (!isValidObjectId(requestId)) {
+      return { success: false, error: "Invalid request id" };
+    }
+
+    const session = await getServerSession();
+    const sessionEmail = normalizeEmail(session?.user?.email);
+
+    if (!sessionEmail) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    await connectDB();
+
+    const voter = await User.findOne({ email: sessionEmail })
+      .select("_id")
+      .lean();
+
+    if (!voter) {
+      return { success: false, error: "User not found" };
+    }
+
+    const request = await Request.findById(requestId)
+      .select("requesterId voters voteCount")
+      .lean();
+
+    if (!request) {
+      return { success: false, error: "Request not found" };
+    }
+
+    if (String(request.requesterId) === String(voter._id)) {
+      return { success: false, error: "You cannot vote on your own request" };
+    }
+
+    const alreadyVoted = Array.isArray(request.voters)
+      ? request.voters.some((id) => String(id) === String(voter._id))
+      : false;
+
+    const updated = await Request.findOneAndUpdate(
+      {
+        _id: requestId,
+        ...(alreadyVoted
+          ? { voters: voter._id }
+          : { voters: { $ne: voter._id } }),
+      },
+      {
+        ...(alreadyVoted
+          ? { $pull: { voters: voter._id }, $inc: { voteCount: -1 } }
+          : { $addToSet: { voters: voter._id }, $inc: { voteCount: 1 } }),
+      },
+      { new: true }
+    )
+      .select("voteCount voters")
+      .lean();
+
+    const nextVoteCount = Math.max(0, updated?.voteCount ?? request.voteCount ?? 0);
+    const nextHasVoted = Array.isArray(updated?.voters)
+      ? updated.voters.some((id) => String(id) === String(voter._id))
+      : !alreadyVoted;
+
+    return { success: true, voteCount: nextVoteCount, hasVoted: nextHasVoted };
+  } catch (error) {
+    console.error("Error toggling request vote:", error);
+    return { success: false, error: "Failed to update vote" };
+  }
+}
+
 export async function getOpenRequestsForUpload(page = 1, limit = 6) {
   try {
     const session = await getServerSession();
@@ -374,6 +442,14 @@ export async function getOpenRequestsForUpload(page = 1, limit = 6) {
 
     await connectDB();
 
+    const currentUser = await User.findOne({ email: normalizeEmail(session.user.email) })
+      .select("_id")
+      .lean();
+
+    if (!currentUser) {
+      return { success: false, error: "User not found" };
+    }
+
     const safePage = Number.isInteger(page) && page > 0 ? page : 1;
     const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 6;
     const skip = (safePage - 1) * safeLimit;
@@ -381,16 +457,32 @@ export async function getOpenRequestsForUpload(page = 1, limit = 6) {
     const [total, requests] = await Promise.all([
       Request.countDocuments({ status: "open" }),
       Request.find({ status: "open" })
-        .select("subject semester year program institute createdAt")
-        .sort({ createdAt: -1 })
+        .select("subject semester year program institute createdAt voteCount voters requesterId")
+        .sort({ voteCount: -1, createdAt: -1 })
         .skip(skip)
         .limit(safeLimit)
         .lean(),
     ]);
 
+    const sanitizedRequests = requests.map((request) => {
+      const voters = Array.isArray(request.voters) ? request.voters : [];
+      return {
+        _id: request._id,
+        subject: request.subject,
+        semester: request.semester,
+        year: request.year,
+        program: request.program,
+        institute: request.institute,
+        createdAt: request.createdAt,
+        voteCount: request.voteCount || 0,
+        hasVoted: voters.some((id) => String(id) === String(currentUser._id)),
+        isOwner: String(request.requesterId) === String(currentUser._id),
+      };
+    });
+
     return {
       success: true,
-      requests: serializeDoc(requests),
+      requests: serializeDoc(sanitizedRequests),
       total,
       page: safePage,
       totalPages: Math.max(1, Math.ceil(total / safeLimit)),

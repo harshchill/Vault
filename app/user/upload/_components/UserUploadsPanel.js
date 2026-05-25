@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FiFileText, FiChevronLeft, FiChevronRight, FiLoader } from "react-icons/fi";
+import { useEffect, useMemo, useState } from "react";
+import { FiFileText, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getUserUploadsWithStatus } from "@/app/actions/userActions";
 
 const statusStyles = {
@@ -14,7 +14,6 @@ export default function UserUploadsPanel() {
   const [uploads, setUploads] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -31,7 +30,6 @@ export default function UserUploadsPanel() {
     setUploads(result.uploads || []);
     setPage(result.page || 1);
     setTotalPages(result.totalPages || 1);
-    setTotal(result.total || 0);
     setLoading(false);
   };
 
@@ -45,8 +43,13 @@ export default function UserUploadsPanel() {
     fetchUploads(nextPage);
   };
 
+  const skeletonCards = useMemo(
+    () => Array.from({ length: 6 }, (_, index) => ({ id: `skeleton-${index}` })),
+    []
+  );
+
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-lg shadow-emerald-500/5 backdrop-blur">
+    <section className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-lg shadow-emerald-500/5 backdrop-blur lg:p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-emerald-700">
@@ -58,15 +61,24 @@ export default function UserUploadsPanel() {
             See which papers are approved, pending, or rejected.
           </p>
         </div>
-        <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-          {total} total
-        </div>
       </div>
 
       <div className="mt-5 space-y-3">
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <FiLoader className="animate-spin" /> Loading uploads...
+          <div className="grid gap-3 lg:grid-cols-2">
+            {skeletonCards.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-slate-100 bg-white px-4 py-4 shadow-sm"
+              >
+                <div className="h-4 w-3/5 rounded bg-slate-200 animate-pulse" />
+                <div className="mt-3 h-3 w-2/5 rounded bg-slate-200 animate-pulse" />
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="h-6 w-28 rounded-full bg-slate-200 animate-pulse" />
+                  <div className="h-6 w-20 rounded-full bg-slate-200 animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : null}
 
@@ -83,7 +95,7 @@ export default function UserUploadsPanel() {
         ) : null}
 
         {!loading && !error && uploads.length > 0 ? (
-          <ul className="space-y-3">
+          <ul className="grid gap-3 lg:grid-cols-2">
             {uploads.map((upload) => (
               <li
                 key={upload._id}

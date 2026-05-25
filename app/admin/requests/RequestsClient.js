@@ -184,9 +184,14 @@ export default function RequestsClient({ initialRequests, matchingRequests }) {
                         <Clock size={16} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className={`font-semibold truncate ${selectedRequest?._id === request._id ? "text-[#00baa4]" : "text-gray-900"}`}>
-                          {request.subject}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className={`font-semibold truncate ${selectedRequest?._id === request._id ? "text-[#00baa4]" : "text-gray-900"}`}>
+                            {request.subject}
+                          </p>
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            {request.voteCount || 0} votes
+                          </span>
+                        </div>
                         <p className="text-xs text-gray-500 truncate mt-1">
                           {request.program} • Sem {request.semester} • {request.year}
                         </p>
@@ -218,6 +223,9 @@ export default function RequestsClient({ initialRequests, matchingRequests }) {
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">{selectedRequest.subject}</h2>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-sm text-gray-600">
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-medium text-gray-900">Votes:</span> {selectedRequest.voteCount || 0}
+                    </span>
                     <span className="flex items-center gap-1.5"><span className="font-medium text-gray-900">Institute:</span> {selectedRequest.institute}</span>
                     <span className="flex items-center gap-1.5"><span className="font-medium text-gray-900">Program:</span> {selectedRequest.program} - {selectedRequest.specialization}</span>
                     <span className="flex items-center gap-1.5"><span className="font-medium text-gray-900">Year:</span> {selectedRequest.year}</span>
