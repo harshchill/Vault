@@ -14,6 +14,8 @@ const RequestSchema = new mongoose.Schema(
     specialization: { type: String, required: true, trim: true },
     semester: { type: Number, required: true, min: 1, max: 8 },
     year: { type: Number, required: true, min: 2000, max: 2100 },
+    voters: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    voteCount: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
       enum: ["open", "fulfilled", "rejected"],
@@ -24,6 +26,7 @@ const RequestSchema = new mongoose.Schema(
 );
 
 RequestSchema.index({ status: 1, createdAt: -1 });
+RequestSchema.index({ status: 1, voteCount: -1, createdAt: -1 });
 RequestSchema.index({ program: 1, specialization: 1, semester: 1, year: 1, institute: 1 });
 
 export default mongoose.models.Request || mongoose.model("Request", RequestSchema);

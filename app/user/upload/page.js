@@ -7,6 +7,7 @@ import { FiUpload, FiFileText } from 'react-icons/fi';
 import { UNIVERSITY_COURSES } from "@/lib/universityCourses";
 import RequestQueuePanel from "./_components/RequestQueuePanel";
 import UserUploadsPanel from "./_components/UserUploadsPanel";
+import RequestPaperModal from "@/app/component/RequestPaperModal";
 
 export default function UploadPage() {
   const { data: session, status } = useSession();
@@ -28,6 +29,8 @@ export default function UploadPage() {
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestRefreshKey, setRequestRefreshKey] = useState(0);
 
   // Require authentication
   useEffect(() => {
@@ -440,12 +443,24 @@ export default function UploadPage() {
         </div>
         <div className="mt-12 grid gap-6 lg:grid-cols-2">
           <div id="request-queue" className="scroll-mt-28">
-            <RequestQueuePanel />
+            <RequestQueuePanel
+              onCreateRequest={() => setShowRequestModal(true)}
+              refreshKey={requestRefreshKey}
+            />
           </div>
           <div id="upload-status" className="scroll-mt-28">
             <UserUploadsPanel />
           </div>
         </div>
+
+        <RequestPaperModal
+          isOpen={showRequestModal}
+          onClose={() => setShowRequestModal(false)}
+          onSuccess={() => {
+            setRequestRefreshKey((prev) => prev + 1);
+            setShowRequestModal(false);
+          }}
+        />
       </div>
     </div>
   );

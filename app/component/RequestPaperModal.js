@@ -17,7 +17,12 @@ const buildYearOptions = () => {
   return years;
 };
 
-export default function RequestPaperModal({ isOpen, onClose, initialSubject = "" }) {
+export default function RequestPaperModal({
+  isOpen,
+  onClose,
+  initialSubject = "",
+  onSuccess,
+}) {
   const titleId = useId();
   const descriptionId = useId();
   const programOptions = useMemo(() => Object.keys(UNIVERSITY_COURSES), []);
@@ -118,6 +123,9 @@ export default function RequestPaperModal({ isOpen, onClose, initialSubject = ""
     }
 
     setSuccess("Request submitted. We will notify uploaders to help you soon.");
+    if (onSuccess) {
+      onSuccess(result.request);
+    }
     setFormData((prev) => ({
       ...prev,
       institute: "",
