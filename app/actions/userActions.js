@@ -457,7 +457,7 @@ export async function getOpenRequestsForUpload(page = 1, limit = 6) {
     const [total, requests] = await Promise.all([
       Request.countDocuments({ status: "open" }),
       Request.find({ status: "open" })
-        .select("subject semester year program institute createdAt voteCount voters requesterId")
+        .select("subject semester year program specialization  institute createdAt voteCount voters requesterId")
         .sort({ voteCount: -1, createdAt: -1 })
         .skip(skip)
         .limit(safeLimit)
@@ -472,6 +472,7 @@ export async function getOpenRequestsForUpload(page = 1, limit = 6) {
         semester: request.semester,
         year: request.year,
         program: request.program,
+        specialization: request.specialization,
         institute: request.institute,
         createdAt: request.createdAt,
         voteCount: request.voteCount || 0,
@@ -515,7 +516,7 @@ export async function getUserUploadsWithStatus(page = 1, limit = 6) {
     const [total, uploads] = await Promise.all([
       Paper.countDocuments({ uploaderID: user._id }),
       Paper.find({ uploaderID: user._id })
-        .select("subject semester year program institute status uploadedAt")
+        .select("subject semester year program specialization institute status uploadedAt")
         .sort({ uploadedAt: -1 })
         .skip(skip)
         .limit(safeLimit)

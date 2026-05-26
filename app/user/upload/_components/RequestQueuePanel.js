@@ -146,7 +146,7 @@ export default function RequestQueuePanel({ onCreateRequest, refreshKey = 0 }) {
         ) : null}
 
         {!loading && !error && requests.length > 0 ? (
-          <ul className="grid gap-3 lg:grid-cols-2">
+          <ul className="grid gap-3 lg:grid-cols-2 ">
             {requests.map((request) => (
               <li
                 key={request._id}
@@ -154,15 +154,21 @@ export default function RequestQueuePanel({ onCreateRequest, refreshKey = 0 }) {
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">
+                    <p className="font-semibold text-slate-900 ">
                       {request.subject}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1 truncate">
-                      {request.program} • {request.institute}
+                     <p className="text-xs text-slate-500 mt-1 ">
+                      {request.program}
                     </p>
+                    <p className="text-xs text-slate-500 mt-1 ">
+                      {request.specialization} 
+                    </p> <p className="text-xs text-slate-500 mt-1 ">
+                      {request.institute}
+                    </p>
+                   
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <div className="flex flex-col items-start gap-2.5">
+                    <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
                       Sem {request.semester} • {request.year}
                     </span>
                     <button
@@ -170,15 +176,11 @@ export default function RequestQueuePanel({ onCreateRequest, refreshKey = 0 }) {
                       onClick={() => handleVote(request._id)}
                       disabled={request.isOwner || voteLoadingIds.has(request._id)}
                       aria-pressed={request.hasVoted}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                      className={`group flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500/20 ${
                         request.hasVoted
-                          ? "border-emerald-300 bg-emerald-100 text-emerald-700"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:text-emerald-700"
-                      } ${
-                        request.isOwner
-                          ? "cursor-not-allowed opacity-50"
-                          : ""
-                      }`}
+                          ? "border-emerald-200 bg-emerald-100/50 text-emerald-700 shadow-emerald-100"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-emerald-200 hover:bg-emerald-50/50 hover:text-emerald-700"
+                      } ${request.isOwner ? "cursor-not-allowed opacity-50 shadow-none" : ""}`}
                       title={
                         request.isOwner
                           ? "You cannot vote on your own request"
@@ -187,8 +189,23 @@ export default function RequestQueuePanel({ onCreateRequest, refreshKey = 0 }) {
                           : "Upvote"
                       }
                     >
-                      <FiArrowUp size={14} />
-                      {request.voteCount}
+                      <FiArrowUp
+                        className={`text-sm transition-transform duration-200 ${
+                          request.hasVoted
+                            ? "text-emerald-600"
+                            : "text-slate-400 group-hover:-translate-y-0.5 group-hover:text-emerald-600"
+                        }`}
+                      />
+                      <span>Upvote</span>
+                      <span
+                        className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] ${
+                          request.hasVoted
+                            ? "bg-emerald-200/80 text-emerald-800"
+                            : "bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700"
+                        }`}
+                      >
+                        {request.voteCount}
+                      </span>
                     </button>
                   </div>
                 </div>
