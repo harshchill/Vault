@@ -167,7 +167,7 @@ export default function RequestQueuePanel({ onCreateRequest, refreshKey = 0 }) {
                     </p>
                    
                   </div>
-                  <div className="flex flex-col items-start gap-2.5">
+                  <div className="flex flex-col items-end gap-2.5">
                     <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
                       Sem {request.semester} • {request.year}
                     </span>

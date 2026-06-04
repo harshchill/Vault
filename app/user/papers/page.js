@@ -697,7 +697,7 @@ export default function PapersPage() {
                     <div className="mt-4 flex items-center gap-2">
                       <button
                         onClick={() => handleViewPaper(paper.id)}
-                        disabled={!paper.storageURL}
+                        disabled={!paper.hasPdf}
                         className="button button-primary flex flex-1 items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <span>View paper</span>

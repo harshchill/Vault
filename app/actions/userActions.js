@@ -6,6 +6,7 @@ import Paper from "@/models/paper";
 import Request from "@/models/request";
 import SavedPaper from "@/models/savedPaper";
 import { getServerSession } from "next-auth/next";
+import { authoptions } from "@/app/api/auth/[...nextauth]/route";
 import { isValidObjectId } from "mongoose";
 
 const normalizeEmail = (email) =>
@@ -14,26 +15,28 @@ const normalizeEmail = (email) =>
 const serializeDoc = (doc) => JSON.parse(JSON.stringify(doc));
 
 async function resolveActingEmail(email) {
-  const session = await getServerSession();
+  const session = await getServerSession(authoptions);
   const sessionEmail = normalizeEmail(session?.user?.email);
   const providedEmail = normalizeEmail(email);
 
-  if (sessionEmail && providedEmail && sessionEmail !== providedEmail) {
-    return { success: false, error: "Unauthorized request" };
-  }
-
-  const actingEmail = sessionEmail || providedEmail;
-  if (!actingEmail) {
+  if (!sessionEmail) {
     return { success: false, error: "Authentication required" };
   }
 
-  return { success: true, email: actingEmail };
+  if (providedEmail && sessionEmail !== providedEmail) {
+    return { success: false, error: "Unauthorized request" };
+  }
+
+  return { success: true, email: sessionEmail };
 }
 
 export async function getUserDashboardStats(email) {
   try {
+    const resolved = await resolveActingEmail(email);
+    if (!resolved.success) return resolved;
+
     await connectDB();
-    const user = await User.findOne({ email }).lean();
+    const user = await User.findOne({ email: resolved.email }).lean();
     if (!user) return { success: false, error: "User not found" };
 
     const isProfileComplete = Boolean(
@@ -138,8 +141,11 @@ export async function getUserDashboardStats(email) {
 
 export async function getUserProfile(email) {
   try {
+    const resolved = await resolveActingEmail(email);
+    if (!resolved.success) return resolved;
+
     await connectDB();
-    const user = await User.findOne({ email }).lean();
+    const user = await User.findOne({ email: resolved.email }).lean();
     if (!user) return { success: false, error: "User not found" };
 
     return {
@@ -164,6 +170,9 @@ export async function getUserProfile(email) {
 
 export async function updateUserProfile(email, formData) {
   try {
+    const resolved = await resolveActingEmail(email);
+    if (!resolved.success) return resolved;
+
     await connectDB();
     
     const updateData = {
@@ -190,7 +199,7 @@ export async function updateUserProfile(email, formData) {
     }
 
     const updatedUser = await User.findOneAndUpdate(
-      { email },
+      { email: resolved.email },
       { $set: updateData },
       { new: true }
     ).lean();
@@ -309,16 +318,12 @@ export async function unsavePaperForUser(email, paperId) {
 
 export async function createPaperRequest(payload) {
   try {
-    const session = await getServerSession();
-    const sessionEmail = normalizeEmail(session?.user?.email);
-
-    if (!sessionEmail) {
-      return { success: false, error: "Authentication required" };
-    }
+    const resolved = await resolveActingEmail();
+    if (!resolved.success) return resolved;
 
     await connectDB();
 
-    const requester = await User.findOne({ email: sessionEmail })
+    const requester = await User.findOne({ email: resolved.email })
       .select("_id email")
       .lean();
 
@@ -371,16 +376,12 @@ export async function toggleRequestVote(requestId) {
       return { success: false, error: "Invalid request id" };
     }
 
-    const session = await getServerSession();
-    const sessionEmail = normalizeEmail(session?.user?.email);
-
-    if (!sessionEmail) {
-      return { success: false, error: "Authentication required" };
-    }
+    const resolved = await resolveActingEmail();
+    if (!resolved.success) return resolved;
 
     await connectDB();
 
-    const voter = await User.findOne({ email: sessionEmail })
+    const voter = await User.findOne({ email: resolved.email })
       .select("_id")
       .lean();
 
@@ -435,14 +436,12 @@ export async function toggleRequestVote(requestId) {
 
 export async function getOpenRequestsForUpload(page = 1, limit = 6) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return { success: false, error: "Authentication required" };
-    }
+    const resolved = await resolveActingEmail();
+    if (!resolved.success) return resolved;
 
     await connectDB();
 
-    const currentUser = await User.findOne({ email: normalizeEmail(session.user.email) })
+    const currentUser = await User.findOne({ email: resolved.email })
       .select("_id")
       .lean();
 
@@ -496,15 +495,12 @@ export async function getOpenRequestsForUpload(page = 1, limit = 6) {
 
 export async function getUserUploadsWithStatus(page = 1, limit = 6) {
   try {
-    const session = await getServerSession();
-    const email = normalizeEmail(session?.user?.email);
-    if (!email) {
-      return { success: false, error: "Authentication required" };
-    }
+    const resolved = await resolveActingEmail();
+    if (!resolved.success) return resolved;
 
     await connectDB();
 
-    const user = await User.findOne({ email }).select("_id").lean();
+    const user = await User.findOne({ email: resolved.email }).select("_id").lean();
     if (!user) {
       return { success: false, error: "User not found" };
     }
@@ -614,10 +610,8 @@ export async function getPaperPdfUrl(paperId) {
       return { success: false, error: "Invalid paper id" };
     }
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return { success: false, error: "Authentication required" };
-    }
+    const resolved = await resolveActingEmail();
+    if (!resolved.success) return resolved;
 
     await connectDB();
 

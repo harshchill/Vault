@@ -150,7 +150,6 @@ export async function GET(request) {
           semester: 1,
           year: 1,
           uploaderName: "$uploaderData.name",
-          uploaderEmail: "$uploaderData.email",
           uploadedAt: 1,
           relevanceScore: 1,
         },
