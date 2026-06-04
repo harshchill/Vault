@@ -12,6 +12,9 @@ import { isValidObjectId } from "mongoose";
 const normalizeEmail = (email) =>
   typeof email === "string" ? email.trim().toLowerCase() : "";
 
+const normalizeFormString = (value) =>
+  typeof value === "string" ? value.trim() : "";
+
 const serializeDoc = (doc) => JSON.parse(JSON.stringify(doc));
 
 async function resolveActingEmail(email) {
@@ -23,16 +26,16 @@ async function resolveActingEmail(email) {
     return { success: false, error: "Authentication required" };
   }
 
-  if (providedEmail && sessionEmail !== providedEmail) {
+  if (sessionEmail !== providedEmail) {
     return { success: false, error: "Unauthorized request" };
   }
 
   return { success: true, email: sessionEmail };
 }
 
-export async function getUserDashboardStats(email) {
+export async function getUserDashboardStats() {
   try {
-    const resolved = await resolveActingEmail(email);
+    const resolved = await resolveActingEmail();
     if (!resolved.success) return resolved;
 
     await connectDB();
@@ -139,9 +142,9 @@ export async function getUserDashboardStats(email) {
   }
 }
 
-export async function getUserProfile(email) {
+export async function getUserProfile() {
   try {
-    const resolved = await resolveActingEmail(email);
+    const resolved = await resolveActingEmail();
     if (!resolved.success) return resolved;
 
     await connectDB();
@@ -168,35 +171,41 @@ export async function getUserProfile(email) {
   }
 }
 
-export async function updateUserProfile(email, formData) {
+export async function updateUserProfile(formData) {
   try {
-    const resolved = await resolveActingEmail(email);
+    const resolved = await resolveActingEmail();
     if (!resolved.success) return resolved;
 
     await connectDB();
-    
+
     const updateData = {
-      name: formData.get("name"),
-      university: formData.get("university"),
-      program: formData.get("program"),
-      specialization: formData.get("specialization"),
+      name: normalizeFormString(formData.get("name")),
+      university: normalizeFormString(formData.get("university")),
+      program: normalizeFormString(formData.get("program")),
+      specialization: normalizeFormString(formData.get("specialization")),
     };
 
-    if (typeof updateData.name === "string") {
-      updateData.name = updateData.name.trim();
-    }
-    
-    // Add image URL if provided
-    const imgUrl = formData.get("image");
-    if (imgUrl) {
-      updateData.image = imgUrl;
+    if (!updateData.name) {
+      return { success: false, error: "Name is required" };
     }
 
-    // Only update semester if it's a valid number
-    const sem = formData.get("semester");
-    if (sem && !isNaN(sem)) {
-      updateData.semester = Number(sem);
+    if (!updateData.university || !updateData.program || !updateData.specialization) {
+      return { success: false, error: "Institute, program, and specialization are required" };
     }
+
+    const imgUrl = normalizeFormString(formData.get("image"));
+    if (imgUrl) {
+      updateData.image = imgUrl;
+    } else {
+      updateData.image = null;
+    }
+
+    const sem = formData.get("semester");
+    const semesterNum = Number(sem);
+    if (!Number.isInteger(semesterNum) || semesterNum < 1 || semesterNum > 10) {
+      return { success: false, error: "Semester must be a number between 1 and 10" };
+    }
+    updateData.semester = semesterNum;
 
     const updatedUser = await User.findOneAndUpdate(
       { email: resolved.email },
@@ -213,13 +222,13 @@ export async function updateUserProfile(email, formData) {
   }
 }
 
-export async function savePaperForUser(email, paperId) {
+export async function savePaperForUser(paperId) {
   try {
     if (!isValidObjectId(paperId)) {
       return { success: false, error: "Invalid paper id" };
     }
 
-    const resolved = await resolveActingEmail(email);
+    const resolved = await resolveActingEmail();
     if (!resolved.success) return resolved;
 
     await connectDB();
@@ -276,13 +285,13 @@ export async function savePaperForUser(email, paperId) {
   }
 }
 
-export async function unsavePaperForUser(email, paperId) {
+export async function unsavePaperForUser(paperId) {
   try {
     if (!isValidObjectId(paperId)) {
       return { success: false, error: "Invalid paper id" };
     }
 
-    const resolved = await resolveActingEmail(email);
+    const resolved = await resolveActingEmail();
     if (!resolved.success) return resolved;
 
     await connectDB();
@@ -532,9 +541,9 @@ export async function getUserUploadsWithStatus(page = 1, limit = 6) {
   }
 }
 
-export async function getSavedPaperIds(email) {
+export async function getSavedPaperIds() {
   try {
-    const resolved = await resolveActingEmail(email);
+    const resolved = await resolveActingEmail();
     if (!resolved.success) return resolved;
 
     await connectDB();
@@ -558,9 +567,9 @@ export async function getSavedPaperIds(email) {
   }
 }
 
-export async function getSavedPapers(email) {
+export async function getSavedPapers() {
   try {
-    const resolved = await resolveActingEmail(email);
+    const resolved = await resolveActingEmail();
     if (!resolved.success) return resolved;
 
     await connectDB();

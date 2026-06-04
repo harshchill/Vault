@@ -96,7 +96,7 @@ export default function ProfileForm({ user }) {
   async function handleAction(formData) {
     setLoading(true);
     setMessage(null);
-    const result = await updateUserProfile(user.email, formData);
+    const result = await updateUserProfile(formData);
     setMessage(result);
     setLoading(false);
   }

@@ -45,17 +45,8 @@ const toPaperResponse = (paperInput) => {
       ? paperInput.toObject()
       : paperInput;
 
-  const uploaderData =
-    paper?.uploaderID && typeof paper.uploaderID === "object"
-      ? paper.uploaderID
-      : null;
-
-  const uploaderObjectId = uploaderData?._id ?? paper?.uploaderID;
-
   return {
     id: String(paper._id),
-    uploaderID: uploaderObjectId ? String(uploaderObjectId) : null,
-    uploaderName: uploaderData?.name ?? null,
     institute: paper.institute,
     subject: paper.subject,
     program: paper.program,
@@ -121,7 +112,7 @@ export async function POST(request) {
     await connectDB();
 
     const uploader = await User.findOne({ email: token.email })
-      .select("_id name email")
+      .select("_id")
       .lean();
 
     if (!uploader) {
@@ -201,20 +192,11 @@ export async function POST(request) {
       saveCounts: 0,
     });
 
-    const createdPaper = {
-      ...paper.toObject(),
-      uploaderID: {
-        _id: uploader._id,
-        name: uploader.name,
-        email: uploader.email,
-      },
-    };
-
     return NextResponse.json(
       {
         success: true,
         message: "Paper uploaded successfully and is pending admin approval.",
-        paper: toPaperResponse(createdPaper),
+        paper: toPaperResponse(paper),
       },
       { status: 201 }
     );
@@ -466,10 +448,12 @@ export async function GET(request) {
     const total = await Paper.countDocuments(filter);
 
     const papers = await Paper.find(filter)
+      .select(
+        "institute subject program specialization semester year status isExtracted storageURL unlockCounts saveCounts uploadedAt"
+      )
       .sort({ uploadedAt: -1 })
       .skip(offset)
       .limit(limit)
-      .populate("uploaderID", "name email")
       .lean();
 
     const hasMore = offset + papers.length < total;
@@ -579,8 +563,6 @@ export async function PATCH(request) {
     if (!paper) {
       return NextResponse.json({ error: "Paper not found." }, { status: 404 });
     }
-
-    await paper.populate("uploaderID", "name email");
 
     return NextResponse.json(
       {

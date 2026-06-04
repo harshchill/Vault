@@ -41,7 +41,7 @@ export default async function ProfilePage() {
     redirect("/user/auth");
   }
 
-  const { success, user, error } = await getUserProfile(session.user.email);
+  const { success, user, error } = await getUserProfile();
 
   if (!success) {
     return (

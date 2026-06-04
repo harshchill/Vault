@@ -256,7 +256,7 @@ export default function PapersPage() {
         return;
       }
 
-      const result = await getSavedPaperIds(session.user.email);
+      const result = await getSavedPaperIds();
       if (mounted && result?.success && Array.isArray(result.savedPaperIds)) {
         setSavedPaperIds(new Set(result.savedPaperIds));
       }
@@ -356,8 +356,8 @@ export default function PapersPage() {
     });
 
     const result = currentlySaved
-      ? await unsavePaperForUser(session.user.email, paperId)
-      : await savePaperForUser(session.user.email, paperId);
+      ? await unsavePaperForUser(paperId)
+      : await savePaperForUser(paperId);
 
     if (!result?.success) {
       setSavedPaperIds((prev) => {

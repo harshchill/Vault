@@ -435,7 +435,7 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/user/auth")
 
   const { success, stats, recentPapers, user, leaderboard, papersForYou, error } =
-    await getUserDashboardStats(session.user.email)
+    await getUserDashboardStats()
 
   if (!success) {
     return (

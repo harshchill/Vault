@@ -18,13 +18,13 @@ export default async function SavedPapersPage() {
     const paperId = formData.get("paperId");
     if (!paperId) return;
 
-    await unsavePaperForUser(session.user.email, String(paperId));
+    await unsavePaperForUser(String(paperId));
     revalidatePath("/user/saved");
     revalidatePath("/user/papers");
     revalidatePath("/user/dashboard");
   }
 
-  const { success, papers, error } = await getSavedPapers(session.user.email);
+  const { success, papers, error } = await getSavedPapers();
 
   if (!success) {
     return (

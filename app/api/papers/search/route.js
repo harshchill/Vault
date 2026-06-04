@@ -10,6 +10,15 @@ import {
 const escapeRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+const normalizeString = (value) =>
+  typeof value === "string" ? value.trim() : "";
+
+const parseLimit = (value) => {
+  const limit = Number(value);
+  if (!Number.isFinite(limit) || limit <= 0) return 20;
+  return Math.min(Math.floor(limit), 50);
+};
+
 /**
  * GET /api/papers/search
  * Smart search for papers using MongoDB aggregation
@@ -17,7 +26,7 @@ const escapeRegex = (value) =>
  * Query Parameters:
  * - q: Search query (searches subject, program, specialization) [required]
  * - limit: Number of results to return (default: 20, max: 50)
- * - status: Paper status (default: approved)
+ * - status: only approved papers are searchable publicly
  *
  * Returns:
  * - Matching papers with metadata
@@ -41,8 +50,15 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q")?.trim();
-    const limit = Math.min(Number(searchParams.get("limit")) || 20, 50);
-    const status = searchParams.get("status") || "approved";
+    const limit = parseLimit(searchParams.get("limit"));
+    const status = normalizeString(searchParams.get("status") || "approved").toLowerCase();
+
+    if (status !== "approved") {
+      return NextResponse.json(
+        { error: "Only approved papers are searchable." },
+        { status: 403 }
+      );
+    }
 
     if (!query || query.length < 2) {
       return NextResponse.json(
@@ -61,7 +77,7 @@ export async function GET(request) {
     const papers = await Paper.aggregate([
       {
         $match: {
-          status: status,
+          status: "approved",
           $or: [
             { subject: { $regex: escapedQuery, $options: "i" } },
             { program: { $regex: escapedQuery, $options: "i" } },
@@ -127,21 +143,8 @@ export async function GET(request) {
         $limit: limit,
       },
       {
-        $lookup: {
-          from: "users",
-          localField: "uploaderID",
-          foreignField: "_id",
-          as: "uploaderData",
-        },
-      },
-      {
-        $unwind: {
-          path: "$uploaderData",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
         $project: {
+          _id: 0,
           id: { $toString: "$_id" },
           subject: 1,
           institute: 1,
@@ -149,7 +152,6 @@ export async function GET(request) {
           specialization: 1,
           semester: 1,
           year: 1,
-          uploaderName: "$uploaderData.name",
           uploadedAt: 1,
           relevanceScore: 1,
         },
