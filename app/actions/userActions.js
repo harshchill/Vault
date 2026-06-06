@@ -12,22 +12,24 @@ import { isValidObjectId } from "mongoose";
 const normalizeEmail = (email) =>
   typeof email === "string" ? email.trim().toLowerCase() : "";
 
+const escapeRegex = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const emailFilter = (email) => ({
+  email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
+});
+
 const normalizeFormString = (value) =>
   typeof value === "string" ? value.trim() : "";
 
 const serializeDoc = (doc) => JSON.parse(JSON.stringify(doc));
 
-async function resolveActingEmail(email) {
+async function resolveActingEmail() {
   const session = await getServerSession(authoptions);
   const sessionEmail = normalizeEmail(session?.user?.email);
-  const providedEmail = normalizeEmail(email);
 
   if (!sessionEmail) {
     return { success: false, error: "Authentication required" };
-  }
-
-  if (sessionEmail !== providedEmail) {
-    return { success: false, error: "Unauthorized request" };
   }
 
   return { success: true, email: sessionEmail };
@@ -39,7 +41,7 @@ export async function getUserDashboardStats() {
     if (!resolved.success) return resolved;
 
     await connectDB();
-    const user = await User.findOne({ email: resolved.email }).lean();
+    const user = await User.findOne(emailFilter(resolved.email)).lean();
     if (!user) return { success: false, error: "User not found" };
 
     const isProfileComplete = Boolean(
@@ -148,7 +150,7 @@ export async function getUserProfile() {
     if (!resolved.success) return resolved;
 
     await connectDB();
-    const user = await User.findOne({ email: resolved.email }).lean();
+    const user = await User.findOne(emailFilter(resolved.email)).lean();
     if (!user) return { success: false, error: "User not found" };
 
     return {
@@ -208,8 +210,8 @@ export async function updateUserProfile(formData) {
     updateData.semester = semesterNum;
 
     const updatedUser = await User.findOneAndUpdate(
-      { email: resolved.email },
-      { $set: updateData },
+      emailFilter(resolved.email),
+      { $set: { ...updateData, email: resolved.email } },
       { new: true }
     ).lean();
 
@@ -233,7 +235,7 @@ export async function savePaperForUser(paperId) {
 
     await connectDB();
 
-    const user = await User.findOne({ email: resolved.email }).select("_id").lean();
+    const user = await User.findOne(emailFilter(resolved.email)).select("_id").lean();
     if (!user) {
       return { success: false, error: "User not found" };
     }
@@ -296,7 +298,7 @@ export async function unsavePaperForUser(paperId) {
 
     await connectDB();
 
-    const user = await User.findOne({ email: resolved.email }).select("_id").lean();
+    const user = await User.findOne(emailFilter(resolved.email)).select("_id").lean();
     if (!user) {
       return { success: false, error: "User not found" };
     }
@@ -332,7 +334,7 @@ export async function createPaperRequest(payload) {
 
     await connectDB();
 
-    const requester = await User.findOne({ email: resolved.email })
+    const requester = await User.findOne(emailFilter(resolved.email))
       .select("_id email")
       .lean();
 
@@ -390,7 +392,7 @@ export async function toggleRequestVote(requestId) {
 
     await connectDB();
 
-    const voter = await User.findOne({ email: resolved.email })
+    const voter = await User.findOne(emailFilter(resolved.email))
       .select("_id")
       .lean();
 
@@ -450,7 +452,7 @@ export async function getOpenRequestsForUpload(page = 1, limit = 6) {
 
     await connectDB();
 
-    const currentUser = await User.findOne({ email: resolved.email })
+    const currentUser = await User.findOne(emailFilter(resolved.email))
       .select("_id")
       .lean();
 
@@ -509,7 +511,7 @@ export async function getUserUploadsWithStatus(page = 1, limit = 6) {
 
     await connectDB();
 
-    const user = await User.findOne({ email: resolved.email }).select("_id").lean();
+    const user = await User.findOne(emailFilter(resolved.email)).select("_id").lean();
     if (!user) {
       return { success: false, error: "User not found" };
     }
@@ -548,7 +550,7 @@ export async function getSavedPaperIds() {
 
     await connectDB();
 
-    const user = await User.findOne({ email: resolved.email }).select("_id").lean();
+    const user = await User.findOne(emailFilter(resolved.email)).select("_id").lean();
     if (!user) {
       return { success: false, error: "User not found" };
     }
@@ -574,7 +576,7 @@ export async function getSavedPapers() {
 
     await connectDB();
 
-    const user = await User.findOne({ email: resolved.email }).select("_id").lean();
+    const user = await User.findOne(emailFilter(resolved.email)).select("_id").lean();
     if (!user) {
       return { success: false, error: "User not found" };
     }

@@ -8,6 +8,16 @@ import WelcomeEmail from "@/app/component/emailTemplates/WelcomeEmail";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const normalizeEmail = (email) =>
+  typeof email === "string" ? email.trim().toLowerCase() : "";
+
+const escapeRegex = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const emailFilter = (email) => ({
+  email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
+});
+
 export const authoptions = {
   // Configure one or more authentication providers
   providers: [
@@ -27,7 +37,9 @@ export const authoptions = {
       if (user) {
         try {
           await connectDB();
-          const dbUser = await User.findOne({ email: user.email });
+          const email = normalizeEmail(user.email || token.email);
+          if (email) token.email = email;
+          const dbUser = email ? await User.findOne(emailFilter(email)) : null;
           const avatar = user.image || user.avatar_url || token.image;
           if (dbUser) {
             token.role = dbUser.role || "user";
@@ -36,7 +48,7 @@ export const authoptions = {
             // Derive firstName for convenience
             token.firstName =
               (token.name || user.name || "")?.split(" ")[0] ||
-              user.email?.split("@")[0] ||
+              email?.split("@")[0] ||
               "User";
           } else {
             token.role = "user";
@@ -44,7 +56,7 @@ export const authoptions = {
             token.image = avatar;
             token.firstName =
               (user.name || "")?.split(" ")[0] ||
-              user.email?.split("@")[0] ||
+              email?.split("@")[0] ||
               "User";
           }
         } catch (error) {
@@ -57,14 +69,16 @@ export const authoptions = {
         // This ensures role changes in DB are reflected immediately
         try {
           await connectDB();
-          const dbUser = await User.findOne({ email: token.email });
+          const email = normalizeEmail(token.email);
+          if (email) token.email = email;
+          const dbUser = email ? await User.findOne(emailFilter(email)) : null;
           if (dbUser) {
             token.role = dbUser.role || "user";
             token.name = dbUser.name || token.name;
             token.image = dbUser.image || token.image;
             token.firstName =
               (dbUser.name || token.name || "")?.split(" ")[0] ||
-              token.email?.split("@")[0] ||
+              email?.split("@")[0] ||
               "User";
           }
         } catch (error) {
@@ -77,7 +91,10 @@ export const authoptions = {
     async signIn({ user }) {
       try {
         await connectDB();
-        const currentUser = await User.findOne({ email: user.email });
+        const email = normalizeEmail(user.email);
+        if (!email) return false;
+        user.email = email;
+        const currentUser = await User.findOne(emailFilter(email));
         const avatar = user.image || user.avatar_url;
 
         if (!currentUser) {
@@ -86,10 +103,10 @@ export const authoptions = {
 
             await resend.emails.send({
               from: process.env.RESEND_FROM_EMAIL || "Vault <onboarding@resend.dev>",
-              to: user.email,
+              to: email,
               subject: "Welcome to Vault! Your journey starts here.",
               react: <WelcomeEmail
-                userName={user.name || user.email}
+                userName={user.name || email}
                 appName="Vault"
                 dashboardUrl={baseUrl}
                 websiteUrl={baseUrl}
@@ -105,12 +122,13 @@ export const authoptions = {
           const userName = user.name || user.email?.split("@")[0] || "User";
 
           await User.create({
-            email: user.email,
+            email,
             name: userName,
             role: "user", // Default role for new users
             image: avatar || undefined,
           });
         } else {
+          currentUser.email = email;
           // Update name if it's missing or if provider has a better name
           if (
             user.name &&
@@ -152,6 +170,7 @@ export const authoptions = {
     async session({ session, token }) {
       // Get role from token (set in jwt callback)
       if (token) {
+        session.user.email = normalizeEmail(token.email || session.user.email);
         session.user.role = token.role || "user";
         session.user.name =
           token.name || session.user.name || session.user.email?.split("@")[0];
@@ -164,7 +183,10 @@ export const authoptions = {
         // Fallback: try to get from database
         try {
           await connectDB();
-          const dbUser = await User.findOne({ email: session.user.email });
+          session.user.email = normalizeEmail(session.user.email);
+          const dbUser = session.user.email
+            ? await User.findOne(emailFilter(session.user.email))
+            : null;
           if (dbUser) {
             session.user.name =
               dbUser.name ||

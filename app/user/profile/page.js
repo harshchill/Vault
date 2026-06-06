@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { getUserProfile } from "@/app/actions/userActions";
+import { authoptions } from "@/app/api/auth/[...nextauth]/route";
 import ProfileForm from "./ProfileForm";
 
 export const metadata = {
@@ -36,7 +37,7 @@ export const metadata = {
 };
 
 export default async function ProfilePage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authoptions);
   if (!session?.user) {
     redirect("/user/auth");
   }

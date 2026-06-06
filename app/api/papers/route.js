@@ -14,8 +14,15 @@ const VALID_STATUSES = new Set(["approved", "pending", "rejected"]);
 const normalizeString = (value) =>
   typeof value === "string" ? value.trim() : "";
 
+const normalizeEmail = (value) =>
+  typeof value === "string" ? value.trim().toLowerCase() : "";
+
 const escapeRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const emailFilter = (email) => ({
+  email: { $regex: `^${escapeRegex(email)}$`, $options: "i" },
+});
 
 const uniqueStrings = (values) => {
   const map = new Map();
@@ -97,9 +104,11 @@ export async function POST(request) {
       );
     }
 
+    const tokenEmail = normalizeEmail(token.email);
+
     const uploadLimit = await checkRateLimit({
       policyName: "paperUpload",
-      identifier: token.email,
+      identifier: tokenEmail,
     });
 
     if (!uploadLimit.success) {
@@ -111,7 +120,7 @@ export async function POST(request) {
 
     await connectDB();
 
-    const uploader = await User.findOne({ email: token.email })
+    const uploader = await User.findOne(emailFilter(tokenEmail))
       .select("_id")
       .lean();
 

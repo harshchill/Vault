@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi"
 import { getUserDashboardStats } from "@/app/actions/userActions"
 import { LeaderboardBars } from "./_components/LeaderboardBars"
+import { authoptions } from "@/app/api/auth/[...nextauth]/route"
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 
@@ -431,7 +432,7 @@ function PapersForYou({ papers, userSemester, userBranch }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const session = await getServerSession()
+  const session = await getServerSession(authoptions)
   if (!session?.user) redirect("/user/auth")
 
   const { success, stats, recentPapers, user, leaderboard, papersForYou, error } =
