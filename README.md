@@ -1,4 +1,13 @@
 # Vault
+```text
+██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗
+██║   ██║██╔══██╗██║   ██║██║  ╚══██╔══╝
+██║   ██║███████║██║   ██║██║     ██║   
+╚██╗ ██╔╝██╔══██║██║   ██║██║     ██║   
+ ╚████╔╝ ██║  ██║╚██████╔╝███████╗██║   
+  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝   
+                                        
+```
 
 **Vault** is a community-driven exam paper sharing platform where students can discover, upload, and save previous semester papers. Built with Next.js and deployed on Vercel.
 
