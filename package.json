@@ -20,7 +20,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "lucide-react": "^1.14.0",
     "mongoose": "^9.0.0",
-    "next": "16.0.7",
+    "next": "16.0.10",
     "next-auth": "^4.24.13",
     "pdfjs-dist": "^3.11.174",
     "react": "19.2.0",
